@@ -699,6 +699,38 @@ function renderBonusTable(bonuses) {
 
     // Render Bonus Chart
     renderBonusChart(employeeBonuses);
+
+    // Render Rankings
+    renderRankings(employeeBonuses);
+}
+
+function renderRankings(empBonuses) {
+    const container = document.getElementById("bonus-ranking-container");
+    if (!container) return;
+    container.innerHTML = "";
+
+    const sortedEmps = Object.entries(empBonuses)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+
+    const medals = ["🥇", "🥈", "🥉"];
+
+    sortedEmps.forEach(([name, bonus], index) => {
+        const card = document.createElement("div");
+        card.className = `ranking-card rank-${index + 1}`;
+        card.innerHTML = `
+            <div class="rank-badge">${medals[index]}</div>
+            <div class="rank-info">
+                <span class="rank-name">${name}</span>
+                <span class="rank-bonus text-green">${bonus.toLocaleString()} so'm</span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+
+    if (sortedEmps.length === 0) {
+        container.innerHTML = "<div style='color: var(--text-secondary);'>Ma'lumotlar yetarli emas.</div>";
+    }
 }
 
 function renderBonusChart(empData) {
