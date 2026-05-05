@@ -1,4 +1,5 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbx7RGnvVh9NrrWcayc2xE2PXjdhX1vDRh9u12lEI-M8IlOzr-QVyIicTCkNZvwPwlFK/exec";
+const BONUS_API_URL = "https://script.google.com/macros/s/AKfycbxAEtiWND4lvN9oYJx2PyAdw6EVulAEPhKJjB66eDeN7DADUlUjbz_P07rCcJYFcrOW8w/exec";
 let empProjChartInst = null;
 let empTaskChartInst = null;
 let allClients = [];
@@ -54,9 +55,15 @@ async function fetchData() {
     btn.disabled = true;
 
     try {
-        const response = await fetch(API_URL);
-        const data = await response.json();
-        processData(data.clients || []);
+        // Fetch Project Data
+        const projResponse = await fetch(API_URL);
+        const projData = await projResponse.json();
+        processData(projData.clients || []);
+        
+        // Fetch Bonus Data
+        const bonusResponse = await fetch(BONUS_API_URL);
+        const bonusData = await bonusResponse.json();
+        renderBonusTable(bonusData.data || []);
         
         const now = new Date();
         document.getElementById("last-updated").innerText = `Oxirgi yangilanish: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -625,4 +632,40 @@ function openProjectModal(c) {
     }
 
     document.getElementById('projectModal').classList.add('active');
+}
+function renderBonusTable(bonuses) {
+    const tbody = document.querySelector("#bonus-table tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    bonuses.forEach(b => {
+        const tr = document.createElement("tr");
+        
+        let statusClass = "text-primary";
+        if (b.holat === "Tasdiqlandi") statusClass = "text-green";
+        if (b.holat === "Bekor") statusClass = "text-red";
+        if (b.holat === "Kutilmoqda") statusClass = "text-yellow";
+
+        const bonusVal = typeof b.bonus === 'number' ? b.bonus.toLocaleString() + " so'm" : (b.bonus || "-");
+        const summaVal = typeof b.summa === 'number' ? b.summa.toLocaleString() + " so'm" : (b.summa || "-");
+
+        tr.innerHTML = `
+            <td>${b.no || '-'}</td>
+            <td style="font-weight: 600;">${b.mijoz}</td>
+            <td style="font-size: 12px; color: var(--text-secondary);">${b.masul}</td>
+            <td style="font-size: 12px;">${formatShortDate(b.boshlanish)}</td>
+            <td style="font-size: 12px;">${formatShortDate(b.tugash)}</td>
+            <td style="text-align: center;">${b.qolgan} k.</td>
+            <td>
+                <div style="font-size: 11px; margin-bottom: 4px;">${b.progress}</div>
+                <div class="progress-bar-bg" style="height: 6px;">
+                    <div class="progress-bar-fill" style="width: ${parseInt(b.progress) || 0}%; background: var(--primary)"></div>
+                </div>
+            </td>
+            <td style="font-weight: 600;">${summaVal}</td>
+            <td class="${statusClass}" style="font-weight: 500;">${b.holat}</td>
+            <td class="text-green" style="font-weight: 700;">${bonusVal}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
