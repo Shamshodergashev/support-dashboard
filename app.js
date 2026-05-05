@@ -1,5 +1,5 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbzCBulYbqvfhKPoZriI0uMVEoztJ8RJEFEQP2bIH7i0kIrGYnd2E4kTAjcMTzDlWiQI/exec";
-const BONUS_API_URL = "https://script.google.com/macros/s/AKfycbxmBPOJ26kN6ft34Rc22o2wqOEWK-p6Y8uSyvvM267Ya-tO2KpttvhM9-2UJEzHAlF1/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxmBPOJ26kN6ft34Rc22o2wqOEWK-p6Y8uSyvvM267Ya-tO2KpttvhM9-2UJEzHAlF1/exec";
+const BONUS_API_URL = "https://script.google.com/macros/s/AKfycbxmBPOJ26kN6ft34Rc22o2wqOEWK-p6Y8uSyvvM267Ya-tO2KpttvhM9-2UJEzHAlF1/exec"; // Hozircha ikkalasiga ham bitta linkni qo'yib turaman, agar ikkinchisi boshqacha bo'lsa yangilaymiz.
 let allClients = [];
 let allBonusClients = [];
 
