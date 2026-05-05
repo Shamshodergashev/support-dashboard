@@ -28,9 +28,84 @@ body {
     padding: 20px;
 }
 
+.main-layout {
+    display: flex;
+    gap: 20px;
+    min-height: calc(100vh - 40px);
+}
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 20px;
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 40px);
+    background: rgba(15, 23, 42, 0.8);
+}
+.sidebar-logo {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 40px;
+    padding-left: 10px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+    font-size: 15px;
+}
+.nav-item:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-primary);
+}
+.nav-item.active {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary);
+    border-left: 4px solid var(--primary);
+    border-radius: 4px 12px 12px 4px;
+    padding-left: 14px;
+}
+.nav-icon {
+    font-size: 18px;
+    opacity: 0.8;
+}
+.nav-item.active .nav-icon {
+    opacity: 1;
+}
+
 .dashboard-container {
-    max-width: 1600px;
-    margin: 0 auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1300px; /* Center content slightly for better focus */
+}
+
+/* Tabs */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+.tab-content.active {
     display: flex;
     flex-direction: column;
     gap: 20px;
