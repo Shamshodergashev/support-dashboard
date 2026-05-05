@@ -68,7 +68,6 @@ async function fetchData() {
     const now = new Date();
     const timeStr = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
     if (lastUpdated) lastUpdated.innerText = `Yangilangan vaqti: ${timeStr}`;
-
     if (btn) { btn.innerHTML = "🔄 Yangilash"; btn.disabled = false; }
 }
 
@@ -87,7 +86,6 @@ function processData(clients) {
         c.totalTasks = done + pending;
         c.progressVal = c.totalTasks === 0 ? 0 : Math.round((done / c.totalTasks) * 100);
     });
-
     const emps = new Set();
     clients.forEach(c => { if(c.employee) emps.add(c.employee); });
     const empSelect = document.getElementById("filter-employee");
@@ -109,7 +107,6 @@ function applyFilters() {
     const emp = document.getElementById("filter-employee")?.value || "all";
     const startF = document.getElementById("filter-start")?.value || "";
     const deadlineF = document.getElementById("filter-deadline")?.value || "";
-
     const filtered = allClients.filter(c => {
         const mName = c.name.toLowerCase().includes(search);
         const mEmp = emp === "all" || c.employee === emp;
@@ -132,7 +129,6 @@ function renderDashboard(clients) {
     let activeP = totalP - doneP;
     let totalT = 0, doneT = 0, pendingT = 0;
     let empStats = {};
-
     clients.forEach(c => {
         totalT += c.totalTasks; doneT += c.doneTasks; pendingT += c.pendingTasks;
         const e = c.employee || "Biriktirilmagan";
@@ -140,11 +136,9 @@ function renderDashboard(clients) {
         if (c.progressVal === 100) empStats[e].pDone++; else empStats[e].pActive++;
         empStats[e].tDone += c.doneTasks; empStats[e].tPending += c.pendingTasks;
     });
-
     const el = (id, val) => { const e = document.getElementById(id); if(e) e.innerText = val; };
     el("stat-proj-total", totalP); el("stat-proj-done", doneP); el("stat-proj-pending", activeP);
     el("stat-task-total", totalT); el("stat-task-done", doneT); el("stat-task-pending", pendingT);
-
     renderCharts(empStats);
     renderLists(clients);
     renderTable(clients);
@@ -214,14 +208,29 @@ function renderTable(clients) {
     tbody.innerHTML = "";
     clients.forEach(c => {
         const tr = document.createElement("tr");
+        if (c.status === 'stopped') tr.style.opacity = "0.6";
+
+        let deliveryBadge = '-';
+        if (c.delivered) {
+            const dDate = parseDate(c.delivered);
+            const deadDate = parseDate(c.deadline);
+            if (dDate < deadDate) deliveryBadge = `<div class="delivery-badge status-early">🚀 V.Oldin <br><small>${formatShortDate(c.delivered)}</small></div>`;
+            else if (dDate > deadDate) deliveryBadge = `<div class="delivery-badge status-late">⏳ Kechikkan <br><small>${formatShortDate(c.delivered)}</small></div>`;
+            else deliveryBadge = `<div class="delivery-badge status-ontime">🎯 Vaqtida <br><small>${formatShortDate(c.delivered)}</small></div>`;
+        }
+
         tr.innerHTML = `
-            <td><strong>${c.name}</strong></td>
-            <td>${c.employee || '-'}</td>
+            <td><div class="client-name-cell"><strong>${c.name}</strong></div></td>
+            <td><div class="emp-cell">👤 ${c.employee || '-'}</div></td>
             <td>${formatShortDate(c.start)}</td>
             <td>${formatShortDate(c.deadline)}</td>
-            <td>${formatShortDate(c.delivered) || '-'}</td>
-            <td><span class="status-badge ${c.progressVal === 100 ? 'status-completed' : 'status-active'}">${c.progressVal === 100 ? 'Bitgan' : 'Jarayonda'}</span></td>
-            <td>${c.comment || '-'}</td>
+            <td>${deliveryBadge}</td>
+            <td>
+                <span class="status-badge ${c.progressVal === 100 ? 'status-completed' : (c.status === 'stopped' ? 'status-stopped' : 'status-active')}">
+                    ${c.progressVal === 100 ? '✅ Tugatilgan' : (c.status === 'stopped' ? '🛑 To\'xtatilgan' : '⏳ Jarayonda')}
+                </span>
+            </td>
+            <td><div class="comment-cell">${c.comment || '-'}</div></td>
             <td>
                 <div class="progress-container">
                     <div class="progress-bar" style="width: ${c.progressVal}%"></div>
