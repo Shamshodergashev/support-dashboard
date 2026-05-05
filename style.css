@@ -169,45 +169,16 @@ header {
 .stat-card {
     position: relative;
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    backdrop-filter: blur(12px);
-    padding: 25px;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    transition: transform 0.3s;
 }
-
 .stat-card:hover {
-    transform: translateY(-10px) scale(1.02);
-    border-color: var(--primary);
-    box-shadow: 0 15px 40px rgba(59, 130, 246, 0.2);
+    transform: translateY(-5px);
 }
-
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
-    opacity: 0;
-    transition: opacity 0.4s;
-    pointer-events: none;
-}
-
-.stat-card:hover::before {
-    opacity: 1;
-}
-
 .stat-card h3 {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-secondary);
     font-weight: 500;
-    margin-bottom: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    margin-bottom: 10px;
 }
 .deadline-date {
     font-size: 13px;
@@ -307,86 +278,19 @@ header {
     to { opacity: 1; transform: translateY(0); }
 }
 .stat-value {
-    font-size: 2.2rem;
-    font-weight: 800;
-    margin-bottom: 5px;
-    letter-spacing: -1px;
+    font-size: 36px;
+    font-weight: 700;
 }
 .text-green { color: var(--green); }
 .text-yellow { color: var(--yellow); }
 .text-red { color: var(--red); }
 .stat-icon {
     position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 60px;
-    opacity: 0.15;
-    filter: grayscale(1);
-    transition: all 0.3s;
+    right: -10px;
+    bottom: -10px;
+    font-size: 80px;
+    opacity: 0.1;
 }
-
-.stat-card:hover .stat-icon {
-    opacity: 0.3;
-    filter: grayscale(0);
-    transform: translateY(-50%) scale(1.1);
-}
-
-/* Ranking Styles */
-.ranking-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-    margin-bottom: 25px;
-}
-
-.ranking-card {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 18px 25px;
-    border-radius: 18px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--glass-border);
-    transition: all 0.3s;
-}
-
-.ranking-card:hover {
-    background: rgba(255,255,255,0.06);
-    border-color: rgba(255,255,255,0.2);
-}
-
-.rank-badge {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    background: rgba(15, 23, 42, 0.5);
-    border: 2px solid transparent;
-}
-
-.rank-1 .rank-badge { border-color: #ffd700; background: rgba(255, 215, 0, 0.1); color: #ffd700; }
-.rank-2 .rank-badge { border-color: #c0c0c0; background: rgba(192, 192, 192, 0.1); color: #c0c0c0; }
-.rank-3 .rank-badge { border-color: #cd7f32; background: rgba(205, 127, 50, 0.1); color: #cd7f32; }
-
-.rank-info {
-    flex: 1;
-}
-
-.rank-name {
-    font-weight: 600;
-    font-size: 16px;
-    display: block;
-}
-
-.rank-bonus {
-    font-size: 13px;
-    color: var(--text-secondary);
-}
-
 
 /* Grid Layouts */
 .chart-section {

@@ -1,7 +1,8 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbx7RGnvVh9NrrWcayc2xE2PXjdhX1vDRh9u12lEI-M8IlOzr-QVyIicTCkNZvwPwlFK/exec";
 const BONUS_API_URL = "https://script.google.com/macros/s/AKfycbxAEtiWND4lvN9oYJx2PyAdw6EVulAEPhKJjB66eDeN7DADUlUjbz_P07rCcJYFcrOW8w/exec";
+let empProjChartInst = null;
+let empTaskChartInst = null;
 let allClients = [];
-let allBonusClients = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     fetchData();
@@ -46,12 +47,6 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById(tabId).classList.add('active');
         });
     });
-
-    // Bonus Filter Listeners
-    const bonusSearch = document.getElementById("bonus-search-masul");
-    const bonusStatusFilter = document.getElementById("bonus-filter-status");
-    if(bonusSearch) bonusSearch.addEventListener("input", applyBonusFilters);
-    if(bonusStatusFilter) bonusStatusFilter.addEventListener("change", applyBonusFilters);
 });
 
 async function fetchData() {
@@ -68,14 +63,13 @@ async function fetchData() {
         // Fetch Bonus Data
         const bonusResponse = await fetch(BONUS_API_URL);
         const bonusData = await bonusResponse.json();
-        allBonusClients = bonusData.clients || bonusData;
-        renderBonusTable(allBonusClients);
+        renderBonusTable(bonusData.data || []);
         
         const now = new Date();
         document.getElementById("last-updated").innerText = `Oxirgi yangilanish: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
     } catch (error) {
-        console.error("Xatolik tafsiloti:", error);
-        alert("Xatolik yuz berdi! Google Sheets API bilan bog'lanib bo'lmadi. Skript 'Anyone' ruxsati bilan deploy qilinganini tekshiring.");
+        console.error("Xatolik yuz berdi:", error);
+        alert("Ma'lumotlarni yuklab bo'lmadi!");
     } finally {
         btn.innerHTML = "🔄 Yangilash";
         btn.disabled = false;
@@ -639,8 +633,7 @@ function openProjectModal(c) {
 
     document.getElementById('projectModal').classList.add('active');
 }
-let bonusStatusChartInst = null;
-let bonusPerformanceChartInst = null;
+let bonusChartInst = null;
 
 function renderBonusTable(bonuses) {
     const tbody = document.querySelector("#bonus-table tbody");
@@ -666,14 +659,14 @@ function renderBonusTable(bonuses) {
         totalSum += summaValNum;
         if (b.holat === "Tasdiqlandi") {
             confirmedBonus += bonusValNum;
-        } else {
-            pendingBonus += bonusValNum;
+        } else if (b.holat === "Faol" || b.holat === "Kutilmoqda") {
+            pendingBonus += bonusValNum || (summaValNum); // fallback to summa if bonus column not filled but status active
         }
 
         // Employee stats for chart
         if (b.masul) {
             if (!employeeBonuses[b.masul]) employeeBonuses[b.masul] = 0;
-            employeeBonuses[b.masul] += bonusValNum;
+            if (b.holat === "Tasdiqlandi") employeeBonuses[b.masul] += bonusValNum;
         }
 
         const bonusVal = bonusValNum.toLocaleString() + " so'm";
@@ -703,134 +696,51 @@ function renderBonusTable(bonuses) {
     document.getElementById("bonus-stat-total-sum").innerText = totalSum.toLocaleString() + " so'm";
     document.getElementById("bonus-stat-confirmed").innerText = confirmedBonus.toLocaleString() + " so'm";
     document.getElementById("bonus-stat-pending").innerText = (totalSum - confirmedBonus).toLocaleString() + " so'm";
+
+    // Render Bonus Chart
+    renderBonusChart(employeeBonuses);
+}
+
+function renderBonusChart(empData) {
+    const labels = Object.keys(empData);
+    const data = Object.values(empData);
+
+    if (bonusChartInst) bonusChartInst.destroy();
     
-    // Update Central Display
-    const totalDisplay = document.getElementById("total-bonus-display");
-    if(totalDisplay) totalDisplay.innerText = confirmedBonus.toLocaleString();
+    const ctx = document.getElementById('bonusChart');
+    if (!ctx) return;
 
-    // Render WOW Charts
-    renderWowCharts(confirmedBonus, pendingBonus, employeeBonuses);
-
-    // Render Rankings
-    renderRankings(employeeBonuses);
-}
-
-function applyBonusFilters() {
-    const searchVal = document.getElementById("bonus-search-masul").value.toLowerCase();
-    const statusVal = document.getElementById("bonus-filter-status").value;
-
-    const filtered = allBonusClients.filter(b => {
-        const matchesName = (b.masul || "").toLowerCase().includes(searchVal);
-        const matchesStatus = statusVal === "all" || b.holat === statusVal;
-        return matchesName && matchesStatus;
-    });
-
-    renderBonusTable(filtered);
-}
-
-function renderRankings(empBonuses) {
-    const container = document.getElementById("bonus-ranking-container");
-    if (!container) return;
-    container.innerHTML = "";
-
-    const sortedEmps = Object.entries(empBonuses)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3);
-
-    const medals = ["🥇", "🥈", "🥉"];
-
-    sortedEmps.forEach(([name, bonus], index) => {
-        const card = document.createElement("div");
-        card.className = `ranking-card rank-${index + 1}`;
-        card.innerHTML = `
-            <div class="rank-badge">${medals[index]}</div>
-            <div class="rank-info">
-                <span class="rank-name">${name}</span>
-                <span class="rank-bonus text-green">${bonus.toLocaleString()} so'm</span>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-
-    if (sortedEmps.length === 0) {
-        container.innerHTML = "<div style='color: var(--text-secondary);'>Ma'lumotlar yetarli emas.</div>";
-    }
-}
-
-function renderWowCharts(confirmed, pending, empData) {
-    // 1. Status Doughnut Chart
-    const statusCtx = document.getElementById('bonusStatusChart');
-    if (statusCtx) {
-        if (bonusStatusChartInst) bonusStatusChartInst.destroy();
-        bonusStatusChartInst = new Chart(statusCtx.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Tasdiqlangan', 'Kutilmoqda'],
-                datasets: [{
-                    data: [confirmed, pending],
-                    backgroundColor: ['#10b981', 'rgba(245, 158, 11, 0.2)'],
-                    borderColor: ['#10b981', '#f59e0b'],
-                    borderWidth: 2,
-                    hoverOffset: 10,
-                    cutout: '75%'
-                }]
+    bonusChartInst = new Chart(ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Tasdiqlangan Bonus (so\'m)',
+                data: data,
+                backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                borderColor: '#10b981',
+                borderWidth: 2,
+                borderRadius: 8,
+                hoverBackgroundColor: 'rgba(16, 185, 129, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#f8fafc', font: { family: 'Outfit' } } }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                animation: { animateRotate: true, duration: 2000 }
-            }
-        });
-    }
-
-    // 2. Performance Gradient Bar Chart
-    const perfCtx = document.getElementById('bonusPerformanceChart');
-    if (perfCtx) {
-        const ctx = perfCtx.getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 400, 0);
-        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
-        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.8)');
-
-        if (bonusPerformanceChartInst) bonusPerformanceChartInst.destroy();
-        
-        const labels = Object.keys(empData);
-        const values = Object.values(empData);
-
-        bonusPerformanceChartInst = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Bonus yig\'imi (so\'m)',
-                    data: values,
-                    backgroundColor: gradient,
-                    borderRadius: 10,
-                    borderSkipped: false,
-                    barThickness: 25
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    x: { 
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: '#94a3b8', font: { family: 'Outfit' }, callback: v => v.toLocaleString() }
-                    },
-                    y: { 
-                        grid: { display: false },
-                        ticks: { color: 'white', font: { family: 'Outfit', weight: '500' } }
-                    }
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: 'Outfit' } } },
+                y: { 
+                    grid: { color: 'rgba(255,255,255,0.05)' }, 
+                    ticks: { 
+                        color: '#94a3b8', 
+                        font: { family: 'Outfit' },
+                        callback: function(value) { return value.toLocaleString(); }
+                    } 
                 }
             }
-        });
-    }
+        }
+    });
 }
-
