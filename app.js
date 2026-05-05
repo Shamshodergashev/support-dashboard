@@ -81,6 +81,9 @@ async function fetchData() {
         const bonusData = await bonusResponse.json();
         allBonusClients = bonusData.data || bonusData.clients || (Array.isArray(bonusData) ? bonusData : []);
         renderBonusTable(allBonusClients);
+    } catch (error) {
+        console.error("Bonus API Error:", error);
+    } finally {
         btn.innerHTML = "🔄 Yangilash";
         btn.disabled = false;
     }
