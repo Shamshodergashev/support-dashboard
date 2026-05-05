@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const refreshBtn = document.getElementById("refresh-btn");
     if (refreshBtn) refreshBtn.addEventListener("click", fetchData);
     
-    // Filter listeners
     const searchInput = document.getElementById("search-input");
     const empFilter = document.getElementById("filter-employee");
     const startFilter = document.getElementById("filter-start");
@@ -22,15 +21,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if(startFilter) startFilter.addEventListener("change", applyFilters);
     if(deadlineFilter) deadlineFilter.addEventListener("change", applyFilters);
 
-    // Modal Close
     const closeBtn = document.getElementById('closeModal');
     const modal = document.getElementById('projectModal');
     if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('active'));
     
-    // Tab Switching
     const navItems = document.querySelectorAll('.nav-item');
     const tabContents = document.querySelectorAll('.tab-content');
-
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
@@ -43,7 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Bonus Filters
     const bonusSearch = document.getElementById("bonus-search-masul");
     const bonusStatusFilter = document.getElementById("bonus-filter-status");
     if(bonusSearch) bonusSearch.addEventListener("input", applyBonusFilters);
@@ -53,10 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
 async function fetchData() {
     const btn = document.getElementById("refresh-btn");
     const statusText = document.getElementById("fetch-status");
-    if (btn) {
-        btn.innerHTML = "⏳ Yangilanmoqda...";
-        btn.disabled = true;
-    }
+    if (btn) { btn.innerHTML = "⏳ Yangilanmoqda..."; btn.disabled = true; }
     if (statusText) statusText.style.display = "inline";
 
     try {
@@ -64,30 +56,22 @@ async function fetchData() {
         const data = await response.json();
         allClients = data.clients || [];
         processData(allClients);
-    } catch (e) {
-        console.error("Main API Error:", e);
-    }
+    } catch (e) { console.error("Main API Error:", e); }
 
     try {
         const bResponse = await fetch(BONUS_API_URL);
         const bData = await bResponse.json();
         allBonusClients = bData.data || bData.clients || (Array.isArray(bData) ? bData : []);
         renderBonusTable(allBonusClients);
-    } catch (e) {
-        console.error("Bonus API Error:", e);
-    }
+    } catch (e) { console.error("Bonus API Error:", e); }
 
-    // Update time
     const now = new Date();
     const timeStr = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
     const lastUpdated = document.getElementById("last-updated");
     if (lastUpdated) lastUpdated.innerText = `Yangilangan vaqti: ${timeStr}`;
 
     if (statusText) statusText.style.display = "none";
-    if (btn) {
-        btn.innerHTML = "🔄 Yangilash";
-        btn.disabled = false;
-    }
+    if (btn) { btn.innerHTML = "🔄 Yangilash"; btn.disabled = false; }
 }
 
 function processData(clients) {
@@ -106,7 +90,6 @@ function processData(clients) {
         c.progressVal = c.totalTasks === 0 ? 0 : Math.round((done / c.totalTasks) * 100);
     });
 
-    // Populate Emp Dropdown
     const emps = new Set();
     clients.forEach(c => { if(c.employee) emps.add(c.employee); });
     const empSelect = document.getElementById("filter-employee");
@@ -174,7 +157,6 @@ function renderCharts(stats) {
     const pDone = labels.map(l => stats[l].pDone);
     const pActive = labels.map(l => stats[l].pActive);
     const options = { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } };
-
     if (empProjChartInst) empProjChartInst.destroy();
     const ctx1 = document.getElementById('empProjectsChart');
     if (ctx1) {
@@ -187,12 +169,11 @@ function renderCharts(stats) {
             options
         });
     }
-
-    if (empTaskChartInst) empTaskChartInst.destroy();
     const ctx2 = document.getElementById('empTasksChart');
     if (ctx2) {
         const tDone = labels.map(l => stats[l].tDone);
         const tPending = labels.map(l => stats[l].tPending);
+        if (empTaskChartInst) empTaskChartInst.destroy();
         empTaskChartInst = new Chart(ctx2.getContext('2d'), {
             type: 'bar',
             data: { labels, datasets: [
@@ -210,15 +191,12 @@ function renderLists(clients) {
     const completedList = document.getElementById("completed-list");
     const stoppedList = document.getElementById("stopped-list");
     const activeTaskList = document.getElementById("active-task-list");
-
     if(overdueList) overdueList.innerHTML = "";
     if(upcomingList) upcomingList.innerHTML = "";
     if(completedList) completedList.innerHTML = "";
     if(stoppedList) stoppedList.innerHTML = "";
     if(activeTaskList) activeTaskList.innerHTML = "";
-
     const now = new Date(); now.setHours(0,0,0,0);
-
     clients.forEach(c => {
         const dLine = parseDate(c.deadline);
         const itemHtml = `<div class="status-item"><span>${c.name}</span> <small>${c.employee || '-'}</small></div>`;
@@ -238,7 +216,21 @@ function renderTable(clients) {
     tbody.innerHTML = "";
     clients.forEach(c => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${c.id || '-'}</td><td><strong>${c.name}</strong></td><td>${c.employee || '-'}</td><td>${formatShortDate(c.start)}</td><td>${formatShortDate(c.deadline)}</td><td><div class="progress-container"><div class="progress-bar" style="width: ${c.progressVal}%"></div><span class="progress-text">${c.progressVal}%</span></div></td><td><span class="status-badge ${c.progressVal === 100 ? 'status-completed' : 'status-active'}">${c.progressVal === 100 ? 'Bitgan' : 'Jarayonda'}</span></td><td><button class="btn-view" onclick="showProjectDetails('${c.id}')">👁</button></td>`;
+        tr.innerHTML = `
+            <td><strong>${c.name}</strong></td>
+            <td>${c.employee || '-'}</td>
+            <td>${formatShortDate(c.start)}</td>
+            <td>${formatShortDate(c.deadline)}</td>
+            <td>${formatShortDate(c.delivered) || '-'}</td>
+            <td><span class="status-badge ${c.progressVal === 100 ? 'status-completed' : 'status-active'}">${c.progressVal === 100 ? 'Bitgan' : 'Jarayonda'}</span></td>
+            <td>${c.comment || '-'}</td>
+            <td>
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: ${c.progressVal}%"></div>
+                    <span class="progress-text">${c.progressVal}%</span>
+                </div>
+            </td>
+        `;
         tbody.appendChild(tr);
     });
 }
