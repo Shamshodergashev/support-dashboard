@@ -1,16 +1,13 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxmBPOJ26kN6ft34Rc22o2wqOEWK-p6Y8uSyvvM267Ya-tO2KpttvhM9-2UJEzHAlF1/exec";
-const BONUS_API_URL = "https://script.google.com/macros/s/AKfycbxmBPOJ26kN6ft34Rc22o2wqOEWK-p6Y8uSyvvM267Ya-tO2KpttvhM9-2UJEzHAlF1/exec";
-
-let allClients = [];
-let allBonusClients = [];
+const API_URL = "https://script.google.com/macros/s/AKfycbx7RGnvVh9NrrWcayc2xE2PXjdhX1vDRh9u12lEI-M8IlOzr-QVyIicTCkNZvwPwlFK/exec";
 let empProjChartInst = null;
 let empTaskChartInst = null;
+let allClients = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     fetchData();
-    const refreshBtn = document.getElementById("refresh-btn");
-    if (refreshBtn) refreshBtn.addEventListener("click", fetchData);
+    document.getElementById("refresh-btn").addEventListener("click", fetchData);
     
+    // Filter listeners
     const searchInput = document.getElementById("search-input");
     const empFilter = document.getElementById("filter-employee");
     const startFilter = document.getElementById("filter-start");
@@ -21,160 +18,259 @@ document.addEventListener("DOMContentLoaded", () => {
     if(startFilter) startFilter.addEventListener("change", applyFilters);
     if(deadlineFilter) deadlineFilter.addEventListener("change", applyFilters);
 
+    // Modal Close logic
     const closeBtn = document.getElementById('closeModal');
     const modal = document.getElementById('projectModal');
     if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('active'));
-    
-    const navItems = document.querySelectorAll('.nav-item');
-    const tabContents = document.querySelectorAll('.tab-content');
-    navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const tabId = item.getAttribute('data-tab');
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
-            tabContents.forEach(tab => tab.classList.remove('active'));
-            const targetTab = document.getElementById(tabId);
-            if(targetTab) targetTab.classList.add('active');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if(e.target === modal) modal.classList.remove('active');
         });
-    });
-
-    const bonusSearch = document.getElementById("bonus-search-masul");
-    const bonusStatusFilter = document.getElementById("bonus-filter-status");
-    if(bonusSearch) bonusSearch.addEventListener("input", applyBonusFilters);
-    if(bonusStatusFilter) bonusStatusFilter.addEventListener("change", applyBonusFilters);
+    }
 });
 
 async function fetchData() {
     const btn = document.getElementById("refresh-btn");
-    const lastUpdated = document.getElementById("last-updated");
-    if (btn) { btn.innerHTML = "⏳ Yangilanmoqda..."; btn.disabled = true; }
-    if (lastUpdated) lastUpdated.innerText = "Yangilanmoqda...";
+    btn.innerHTML = "⏳ Yangilanmoqda...";
+    btn.disabled = true;
 
     try {
         const response = await fetch(API_URL);
         const data = await response.json();
-        allClients = data.clients || [];
-        processData(allClients);
-    } catch (e) { console.error("Main API Error:", e); }
-
-    try {
-        const bResponse = await fetch(BONUS_API_URL);
-        const bData = await bResponse.json();
-        allBonusClients = bData.data || bData.clients || (Array.isArray(bData) ? bData : []);
-        renderBonusTable(allBonusClients);
-    } catch (e) { console.error("Bonus API Error:", e); }
-
-    const now = new Date();
-    const timeStr = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-    if (lastUpdated) lastUpdated.innerText = `Yangilangan vaqti: ${timeStr}`;
-    if (btn) { btn.innerHTML = "🔄 Yangilash"; btn.disabled = false; }
+        processData(data.clients || []);
+        
+        const now = new Date();
+        document.getElementById("last-updated").innerText = `Oxirgi yangilanish: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+    } catch (error) {
+        console.error("Xatolik yuz berdi:", error);
+        alert("Ma'lumotlarni yuklab bo'lmadi!");
+    } finally {
+        btn.innerHTML = "🔄 Yangilash";
+        btn.disabled = false;
+    }
 }
 
 function processData(clients) {
+    // 1. Calculate base data for all clients
+    let emps = new Set();
     clients.forEach(c => {
-        let done = 0, pending = 0;
+        let done = 0;
+        let pending = 0;
         if (c.tasks) {
-            const lines = String(c.tasks).split('\n');
+            const lines = c.tasks.split('\n');
             lines.forEach(l => {
-                if (l.trim().startsWith('✅') || l.trim().startsWith('☑')) done++;
-                else if (l.trim().startsWith('☐')) pending++;
+                if (l.trim().startsWith('✅')) done++;
+                if (l.trim().startsWith('☐')) pending++;
             });
         }
         c.doneTasks = done;
         c.pendingTasks = pending;
         c.totalTasks = done + pending;
-        c.progressVal = c.totalTasks === 0 ? 0 : Math.round((done / c.totalTasks) * 100);
+        c.progress = c.totalTasks === 0 ? 0 : Math.round((done / c.totalTasks) * 100);
+        
+        if (c.employee) emps.add(c.employee);
     });
-    const emps = new Set();
-    clients.forEach(c => { if(c.employee) emps.add(c.employee); });
+
+    allClients = clients;
+
+    // 2. Populate Employee Dropdown
     const empSelect = document.getElementById("filter-employee");
+    const currentEmp = empSelect ? empSelect.value : "all";
     if (empSelect) {
-        const currentVal = empSelect.value;
         empSelect.innerHTML = '<option value="all">Barcha xodimlar</option>';
         Array.from(emps).sort().forEach(emp => {
-            const opt = document.createElement("option");
-            opt.value = emp; opt.innerText = emp;
-            empSelect.appendChild(opt);
+            const option = document.createElement("option");
+            option.value = emp;
+            option.innerText = emp;
+            empSelect.appendChild(option);
         });
-        empSelect.value = currentVal || "all";
+        empSelect.value = currentEmp;
     }
+
+    // 3. Trigger filters to render everything
     applyFilters();
 }
 
 function applyFilters() {
-    const search = document.getElementById("search-input")?.value.toLowerCase() || "";
-    const emp = document.getElementById("filter-employee")?.value || "all";
-    const startF = document.getElementById("filter-start")?.value || "";
-    const deadlineF = document.getElementById("filter-deadline")?.value || "";
-    const filtered = allClients.filter(c => {
-        const mName = c.name.toLowerCase().includes(search);
-        const mEmp = emp === "all" || c.employee === emp;
-        let mStart = true, mEnd = true;
-        if (startF) {
-            const dStart = new Date(startF); dStart.setHours(0,0,0,0);
-            const cStart = parseDate(c.start); if (cStart < dStart) mStart = false;
+    const searchText = document.getElementById("search-input") ? document.getElementById("search-input").value.toLowerCase() : "";
+    const empFilter = document.getElementById("filter-employee") ? document.getElementById("filter-employee").value : "all";
+    const startFilter = document.getElementById("filter-start") ? document.getElementById("filter-start").value : "";
+    const deadlineFilter = document.getElementById("filter-deadline") ? document.getElementById("filter-deadline").value : "";
+
+    const filteredClients = allClients.filter(c => {
+        const matchName = c.name.toLowerCase().includes(searchText);
+        const matchEmp = empFilter === "all" || (c.employee || "Biriktirilmagan") === empFilter;
+        
+        let matchStart = true;
+        let matchDeadline = true;
+
+        if (startFilter) {
+            const fDate = new Date(startFilter);
+            fDate.setHours(0,0,0,0);
+            const cDate = parseDate(c.start);
+            if (cDate.getFullYear() === 9999 || cDate < fDate) matchStart = false;
         }
-        if (deadlineF) {
-            const dEnd = new Date(deadlineF); dEnd.setHours(23,59,59,999);
-            const cEnd = parseDate(c.deadline); if (cEnd > dEnd) mEnd = false;
+
+        if (deadlineFilter) {
+            const fDate = new Date(deadlineFilter);
+            fDate.setHours(23,59,59,999);
+            const cDate = parseDate(c.deadline);
+            if (cDate.getFullYear() === 9999 || cDate > fDate) matchDeadline = false;
         }
-        return mName && mEmp && mStart && mEnd;
+
+        return matchName && matchEmp && matchStart && matchDeadline;
     });
-    renderDashboard(filtered);
+
+    renderDashboardElements(filteredClients);
 }
 
-function renderDashboard(clients) {
-    let totalP = clients.length, doneP = clients.filter(c => c.progressVal === 100).length;
-    let activeP = totalP - doneP;
-    let totalT = 0, doneT = 0, pendingT = 0;
-    let empStats = {};
+function renderDashboardElements(clients) {
+    let totalProjects = clients.length;
+    let doneProjects = 0;
+    let pendingProjects = 0;
+    
+    let totalTasks = 0;
+    let totalDoneTasks = 0;
+    let totalPendingTasks = 0;
+    
+    let employeeData = {};
+
+    let stoppedProjects = 0;
+
     clients.forEach(c => {
-        totalT += c.totalTasks; doneT += c.doneTasks; pendingT += c.pendingTasks;
-        const e = c.employee || "Biriktirilmagan";
-        if (!empStats[e]) empStats[e] = { pDone: 0, pActive: 0, tDone: 0, tPending: 0 };
-        if (c.progressVal === 100) empStats[e].pDone++; else empStats[e].pActive++;
-        empStats[e].tDone += c.doneTasks; empStats[e].tPending += c.pendingTasks;
+        if (c.status === 'stopped') stoppedProjects++;
+        else if (c.progress === 100) doneProjects++;
+        else pendingProjects++;
+
+        totalTasks += c.totalTasks;
+        totalDoneTasks += c.doneTasks;
+        totalPendingTasks += c.pendingTasks;
+
+        const emp = c.employee || "Biriktirilmagan";
+        if (!employeeData[emp]) {
+            employeeData[emp] = { projDone: 0, projPending: 0, taskDone: 0, taskPending: 0 };
+        }
+        
+        if (c.status !== 'stopped') {
+            if (c.progress === 100) employeeData[emp].projDone++;
+            else employeeData[emp].projPending++;
+            employeeData[emp].taskDone += c.doneTasks;
+            employeeData[emp].taskPending += c.pendingTasks;
+        }
     });
-    const el = (id, val) => { const e = document.getElementById(id); if(e) e.innerText = val; };
-    el("stat-proj-total", totalP); el("stat-proj-done", doneP); el("stat-proj-pending", activeP);
-    el("stat-task-total", totalT); el("stat-task-done", doneT); el("stat-task-pending", pendingT);
-    renderCharts(empStats);
+
+    // Update Top Stats
+    const tp = document.getElementById("stat-proj-total"); if(tp) tp.innerText = totalProjects;
+    const dp = document.getElementById("stat-proj-done"); if(dp) dp.innerText = doneProjects;
+    const pp = document.getElementById("stat-proj-pending"); if(pp) pp.innerText = pendingProjects;
+    
+    const tt = document.getElementById("stat-task-total"); if(tt) tt.innerText = totalTasks;
+    const dt = document.getElementById("stat-task-done"); if(dt) dt.innerText = totalDoneTasks;
+    const pt = document.getElementById("stat-task-pending"); if(pt) pt.innerText = totalPendingTasks;
+
+    // Render Charts
+    renderCharts(employeeData);
+
+    // Render Lists (Overdue, Upcoming, Completed)
     renderLists(clients);
+
+    // Render Table
     renderTable(clients);
 }
 
-function renderCharts(stats) {
-    const labels = Object.keys(stats);
-    const pDone = labels.map(l => stats[l].pDone);
-    const pActive = labels.map(l => stats[l].pActive);
-    const options = { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } };
+function renderCharts(employeeData) {
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+            y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+        },
+        plugins: {
+            legend: { labels: { color: '#f8fafc' } }
+        },
+        onClick: (e, activeElements, chart) => {
+            if (activeElements.length > 0) {
+                const dataIndex = activeElements[0].index;
+                const empName = chart.data.labels[dataIndex];
+                
+                // Set the dropdown
+                const empFilter = document.getElementById("filter-employee");
+                if (empFilter) {
+                    empFilter.value = empName;
+                    applyFilters();
+                    
+                    // Scroll to the table
+                    document.querySelector('.projects-section').scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        }
+    };
+
+    const empLabels = Object.keys(employeeData);
+    
+    // 1. Employee Projects
+    const projDoneData = empLabels.map(l => employeeData[l].projDone);
+    const projPendingData = empLabels.map(l => employeeData[l].projPending);
+
     if (empProjChartInst) empProjChartInst.destroy();
-    const ctx1 = document.getElementById('empProjectsChart');
-    if (ctx1) {
-        empProjChartInst = new Chart(ctx1.getContext('2d'), {
+    const epCtx = document.getElementById('empProjectsChart');
+    if (epCtx) {
+        empProjChartInst = new Chart(epCtx.getContext('2d'), {
             type: 'bar',
-            data: { labels, datasets: [
-                { label: 'Bitgan', data: pDone, backgroundColor: '#10b981' },
-                { label: 'Jarayonda', data: pActive, backgroundColor: '#f59e0b' }
-            ]},
-            options
+            data: {
+                labels: empLabels,
+                datasets: [
+                    { label: 'Bitgan Loyihalar', data: projDoneData, backgroundColor: '#10b981', borderRadius: 4 },
+                    { label: 'Jarayondagi', data: projPendingData, backgroundColor: '#f59e0b', borderRadius: 4 }
+                ]
+            },
+            options: commonOptions
         });
     }
-    const ctx2 = document.getElementById('empTasksChart');
-    if (ctx2) {
-        const tDone = labels.map(l => stats[l].tDone);
-        const tPending = labels.map(l => stats[l].tPending);
-        if (empTaskChartInst) empTaskChartInst.destroy();
-        empTaskChartInst = new Chart(ctx2.getContext('2d'), {
+
+    // 2. Employee Tasks
+    const taskDoneData = empLabels.map(l => employeeData[l].taskDone);
+    const taskPendingData = empLabels.map(l => employeeData[l].taskPending);
+
+    if (empTaskChartInst) empTaskChartInst.destroy();
+    const etCtx = document.getElementById('empTasksChart');
+    if (etCtx) {
+        empTaskChartInst = new Chart(etCtx.getContext('2d'), {
             type: 'bar',
-            data: { labels, datasets: [
-                { label: '✅', data: tDone, backgroundColor: '#10b981' },
-                { label: '☐', data: tPending, backgroundColor: '#3b82f6' }
-            ]},
-            options
+            data: {
+                labels: empLabels,
+                datasets: [
+                    { label: 'Tugatilgan (✅)', data: taskDoneData, backgroundColor: '#10b981', borderRadius: 4 },
+                    { label: 'Jarayonda (☐)', data: taskPendingData, backgroundColor: '#3b82f6', borderRadius: 4 }
+                ]
+            },
+            options: commonOptions
         });
     }
+}
+
+function formatShortDate(dateStr) {
+    if (!dateStr || dateStr === '-' || dateStr.trim() === '') return '-';
+    // Agar allaqachon DD.MM.YYYY bo'lsa
+    if (dateStr.includes('.') && dateStr.length === 10) return dateStr;
+    
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}.${month}.${year}`;
+    }
+    return dateStr;
+}
+
+function parseDate(dateStr) {
+    // DD.MM.YYYY
+    if(!dateStr) return new Date(9999, 0, 1);
+    const parts = dateStr.split('.');
+    if(parts.length !== 3) return new Date(dateStr); // fallback
+    return new Date(parts[2], parts[1] - 1, parts[0]);
 }
 
 function renderLists(clients) {
@@ -182,98 +278,332 @@ function renderLists(clients) {
     const upcomingList = document.getElementById("upcoming-list");
     const completedList = document.getElementById("completed-list");
     const stoppedList = document.getElementById("stopped-list");
-    const activeTaskList = document.getElementById("active-task-list");
-    if(overdueList) overdueList.innerHTML = "";
-    if(upcomingList) upcomingList.innerHTML = "";
-    if(completedList) completedList.innerHTML = "";
-    if(stoppedList) stoppedList.innerHTML = "";
-    if(activeTaskList) activeTaskList.innerHTML = "";
-    const now = new Date(); now.setHours(0,0,0,0);
+    const inprogressList = document.getElementById("inprogress-list");
+    
+    if (overdueList) overdueList.innerHTML = "";
+    if (upcomingList) upcomingList.innerHTML = "";
+    if (completedList) completedList.innerHTML = "";
+    if (stoppedList) stoppedList.innerHTML = "";
+    if (inprogressList) inprogressList.innerHTML = "";
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    let overdueArr = [];
+    let upcomingArr = [];
+    let completedArr = [];
+    let stoppedArr = [];
+    let inprogressArr = [];
+
     clients.forEach(c => {
-        const dLine = parseDate(c.deadline);
-        const itemHtml = `<div class="status-item"><span>${c.name}</span> <small>${c.employee || '-'}</small></div>`;
-        if (c.status === 'stopped') { if(stoppedList) stoppedList.innerHTML += itemHtml; }
-        else if (c.progressVal === 100) { if(completedList) completedList.innerHTML += itemHtml; }
-        else {
-            if (dLine < now && dLine.getFullYear() !== 9999) { if(overdueList) overdueList.innerHTML += itemHtml; }
-            else if (dLine <= new Date(now.getTime() + 3*24*60*60*1000)) { if(upcomingList) upcomingList.innerHTML += itemHtml; }
-            if(activeTaskList) activeTaskList.innerHTML += itemHtml;
+        if (c.status === 'stopped') {
+            stoppedArr.push(c);
+        } else if (c.progress === 100) {
+            completedArr.push(c);
+        } else {
+            inprogressArr.push(c); // barcha bitmaganlar
+
+            if (c.deadline && c.deadline !== '-') {
+                const dDate = parseDate(c.deadline);
+                if (dDate < today) overdueArr.push(c);
+                else upcomingArr.push(c);
+            }
         }
     });
+
+    // Sort by date
+    overdueArr.sort((a, b) => parseDate(a.deadline) - parseDate(b.deadline));
+    upcomingArr.sort((a, b) => parseDate(a.deadline) - parseDate(b.deadline));
+    completedArr.sort((a, b) => parseDate(b.deadline) - parseDate(a.deadline));
+
+    // Render Overdue
+    overdueArr.slice(0, 5).forEach(d => {
+        const li = document.createElement("li");
+        li.className = `deadline-item danger`;
+        let displayDate = formatShortDate(d.deadline);
+        li.innerHTML = `
+            <div class="deadline-info">
+                <strong>${d.name}</strong>
+                <span>👤 ${d.employee || '-'}</span>
+                ${(d.comment && d.comment !== '-') ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; border-left: 2px solid var(--red); padding-left: 6px; opacity: 0.8;">${d.comment}</div>` : ''}
+            </div>
+            <div class="deadline-date text-red">📅 ${displayDate}</div>
+        `;
+        li.style.cursor = "pointer";
+        li.addEventListener('click', () => openProjectModal(d));
+        overdueList.appendChild(li);
+    });
+
+    // Render Upcoming
+    upcomingArr.slice(0, 5).forEach(d => {
+        const li = document.createElement("li");
+        li.className = `deadline-item warning`;
+        let displayDate = formatShortDate(d.deadline);
+        li.innerHTML = `
+            <div class="deadline-info">
+                <strong>${d.name}</strong>
+                <span>👤 ${d.employee || '-'}</span>
+                ${(d.comment && d.comment !== '-') ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; border-left: 2px solid var(--yellow); padding-left: 6px; opacity: 0.8;">${d.comment}</div>` : ''}
+            </div>
+            <div class="deadline-date text-yellow">📅 ${displayDate}</div>
+        `;
+        li.style.cursor = "pointer";
+        li.addEventListener('click', () => openProjectModal(d));
+        upcomingList.appendChild(li);
+    });
+
+    // Render Completed
+    completedArr.slice(0, 5).forEach(d => {
+        const li = document.createElement("li");
+        li.className = `deadline-item`;
+        li.style.borderLeftColor = "var(--green)";
+        li.style.background = "rgba(16, 185, 129, 0.05)";
+        const delDate = parseDate(d.delivered);
+        const deadDate = parseDate(d.deadline);
+        
+        let displayDate = d.delivered && d.delivered !== '-' ? formatShortDate(d.delivered) : formatShortDate(d.deadline);
+        let dateLabel = d.delivered && d.delivered !== '-' ? 'Topshirildi' : '✅';
+        let lateBadge = '';
+        
+        if (d.delivered && d.delivered !== '-') {
+            const diffTime = delDate - deadDate;
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays > 0) {
+                lateBadge = `<span style="font-size: 10px; background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 2px 5px; border-radius: 4px; margin-left: 5px; border: 1px solid #f59e0b;">🐌 Kechikkan</span>`;
+            } else if (diffDays < 0) {
+                lateBadge = `<span style="font-size: 10px; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 5px; border-radius: 4px; margin-left: 5px; border: 1px solid #10b981;">🚀 Vaqtidan oldin</span>`;
+            } else {
+                lateBadge = `<span style="font-size: 10px; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 5px; border-radius: 4px; margin-left: 5px; border: 1px solid #10b981;">🎯 Vaqtida</span>`;
+            }
+        }
+
+        li.innerHTML = `
+            <div class="deadline-info">
+                <strong>${d.name}</strong>
+                <span>👤 ${d.employee || '-'}</span>
+                ${(d.comment && d.comment !== '-') ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; border-left: 2px solid var(--green); padding-left: 6px; opacity: 0.8;">${d.comment}</div>` : ''}
+            </div>
+            <div class="deadline-date text-green" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                <span>${dateLabel}: ${displayDate !== '-' ? displayDate : 'Bitdi'}</span>
+                ${lateBadge}
+            </div>
+        `;
+        li.style.cursor = "pointer";
+        li.addEventListener('click', () => openProjectModal(d));
+        completedList.appendChild(li);
+    });
+
+    if (overdueArr.length === 0) overdueList.innerHTML = `<li style="color:#10b981; text-align:center; padding: 10px;">🎉 Muddati o'tgan ishlar yo'q!</li>`;
+    if (upcomingArr.length === 0) upcomingList.innerHTML = `<li style="color:#94a3b8; text-align:center; padding: 10px;">Yaqin orada tugaydigan ishlar yo'q.</li>`;
+    if (completedArr.length === 0) completedList.innerHTML = `<li style="color:#94a3b8; text-align:center; padding: 10px;">Hali bitgan ishlar yo'q.</li>`;
+
+    // Render Stopped
+    if (stoppedList) {
+        stoppedArr.forEach(d => {
+            const li = document.createElement("li");
+            li.className = `deadline-item danger`;
+            li.innerHTML = `
+                <div class="deadline-info">
+                    <strong>${d.name}</strong>
+                    <span>👤 ${d.employee || '-'}</span>
+                    ${(d.comment && d.comment !== '-') ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; border-left: 2px solid var(--red); padding-left: 6px; opacity: 0.8;">${d.comment}</div>` : ''}
+                </div>
+                <div class="deadline-date text-red">🛑 To'xtatilgan</div>
+            `;
+            li.style.cursor = "pointer";
+            li.addEventListener('click', () => openProjectModal(d));
+            stoppedList.appendChild(li);
+        });
+        if (stoppedArr.length === 0) stoppedList.innerHTML = `<li style="color:#94a3b8; text-align:center; padding: 10px;">To'xtatilgan loyihalar yo'q.</li>`;
+    }
+
+    // Render In Progress
+    if (inprogressList) {
+        // limit to 5 to avoid long list or display all if preferred, let's display up to 10
+        inprogressArr.slice(0, 10).forEach(d => {
+            const li = document.createElement("li");
+            li.className = `deadline-item`;
+            let displayDate = formatShortDate(d.deadline);
+            li.innerHTML = `
+                <div class="deadline-info">
+                    <strong>${d.name}</strong>
+                    <span>👤 ${d.employee || '-'}</span>
+                    ${(d.comment && d.comment !== '-') ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; border-left: 2px solid var(--primary); padding-left: 6px; opacity: 0.8;">${d.comment}</div>` : ''}
+                </div>
+                <div class="deadline-date text-primary">⏳ ${displayDate}</div>
+            `;
+            li.style.cursor = "pointer";
+            li.addEventListener('click', () => openProjectModal(d));
+            inprogressList.appendChild(li);
+        });
+        if (inprogressArr.length === 0) inprogressList.innerHTML = `<li style="color:#94a3b8; text-align:center; padding: 10px;">Jarayondagi ishlar yo'q.</li>`;
+    }
 }
 
 function renderTable(clients) {
-    const tbody = document.getElementById("projects-body");
-    if (!tbody) return;
+    const tbody = document.querySelector("#projects-table tbody");
     tbody.innerHTML = "";
+
     clients.forEach(c => {
         const tr = document.createElement("tr");
-        if (c.status === 'stopped') tr.style.opacity = "0.6";
+        const progColor = c.progress === 100 ? 'var(--green)' : 'var(--primary)';
+        let statusHtml = '';
+        let deliveredHtml = '<span>-</span>';
 
-        let deliveryBadge = '-';
-        if (c.delivered) {
-            const dDate = parseDate(c.delivered);
-            const deadDate = parseDate(c.deadline);
-            if (dDate < deadDate) deliveryBadge = `<div class="delivery-badge status-early">🚀 V.Oldin <br><small>${formatShortDate(c.delivered)}</small></div>`;
-            else if (dDate > deadDate) deliveryBadge = `<div class="delivery-badge status-late">⏳ Kechikkan <br><small>${formatShortDate(c.delivered)}</small></div>`;
-            else deliveryBadge = `<div class="delivery-badge status-ontime">🎯 Vaqtida <br><small>${formatShortDate(c.delivered)}</small></div>`;
+        if (c.status === 'stopped') {
+            statusHtml = `<span style="background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--red); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">🛑 To'xtatilgan</span>`;
+        } else if (c.progress === 100) {
+            statusHtml = `<span style="background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--green); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">✅ Tugatilgan</span>`;
+            
+            if (c.delivered && c.delivered !== '-') {
+                const diffTime = parseDate(c.delivered) - parseDate(c.deadline);
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays > 0) {
+                    deliveredHtml = `
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid #f59e0b; display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">🐌 Kechikkan</span>
+                            <span style="font-size: 10px; color: #f59e0b; font-weight: 500;">${formatShortDate(c.delivered)}</span>
+                        </div>
+                    `;
+                } else if (diffDays < 0) {
+                    deliveredHtml = `
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <span style="background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--green); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">🚀 V.Oldin</span>
+                            <span style="font-size: 10px; color: var(--green); font-weight: 500;">${formatShortDate(c.delivered)}</span>
+                        </div>
+                    `;
+                } else {
+                    deliveredHtml = `
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <span style="background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--green); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">🎯 Vaqtida</span>
+                            <span style="font-size: 10px; color: var(--green); font-weight: 500;">${formatShortDate(c.delivered)}</span>
+                        </div>
+                    `;
+                }
+            }
+        } else {
+            statusHtml = `<span style="background: rgba(59, 130, 246, 0.15); color: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--primary); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">⏳ Jarayonda</span>`;
         }
-
+        
         tr.innerHTML = `
-            <td><div class="client-name-cell"><strong>${c.name}</strong></div></td>
-            <td><div class="emp-cell">👤 ${c.employee || '-'}</div></td>
-            <td>${formatShortDate(c.start)}</td>
-            <td>${formatShortDate(c.deadline)}</td>
-            <td>${deliveryBadge}</td>
+            <td style="font-weight: 600;">${c.name}</td>
+            <td style="font-size: 13px; color: var(--text-secondary);">👤 ${c.employee || '-'}</td>
+            <td style="font-size: 12px;">${formatShortDate(c.start)}</td>
+            <td style="font-size: 12px; font-weight: 500;">${formatShortDate(c.deadline)}</td>
+            <td style="text-align: center;">${deliveredHtml}</td>
+            <td style="text-align: center;">${statusHtml}</td>
+            <td style="font-size: 12px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${c.comment || ''}">${c.comment || '-'}</td>
             <td>
-                <span class="status-badge ${c.progressVal === 100 ? 'status-completed' : (c.status === 'stopped' ? 'status-stopped' : 'status-active')}">
-                    ${c.progressVal === 100 ? '✅ Tugatilgan' : (c.status === 'stopped' ? '🛑 To\'xtatilgan' : '⏳ Jarayonda')}
-                </span>
-            </td>
-            <td><div class="comment-cell">${c.comment || '-'}</div></td>
-            <td>
-                <div class="progress-container">
-                    <div class="progress-bar" style="width: ${c.progressVal}%"></div>
-                    <span class="progress-text">${c.progressVal}%</span>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" style="width: ${c.progress}%; background: ${progColor}"></div>
                 </div>
+                <span class="progress-text">${c.progress}%</span>
             </td>
         `;
+        
+        tr.addEventListener('click', () => openProjectModal(c));
+        
         tbody.appendChild(tr);
     });
 }
 
-function renderBonusTable(data) {
-    const tbody = document.getElementById("bonus-body");
-    if (!tbody) return;
-    tbody.innerHTML = "";
-    data.forEach(b => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${b.no || '-'}</td><td><strong>${b.mijoz || '-'}</strong></td><td>${b.masul || '-'}</td><td>${formatShortDate(b.boshlanish)}</td><td>${formatShortDate(b.tugash)}</td><td>${b.qolgan || '-'}</td><td><div class="bonus-progress">${b.progress || '-'}</div></td><td>${Number(b.summa || 0).toLocaleString()}</td><td><span class="status-badge">${b.holat || '-'}</span></td><td class="bonus-amount">${Number(b.bonus || 0).toLocaleString()}</td>`;
-        tbody.appendChild(tr);
-    });
-}
+function openProjectModal(c) {
+    document.getElementById('modal-title').innerText = c.name;
+    document.getElementById('modal-emp').innerText = c.employee || '-';
+    document.getElementById('modal-start').innerText = formatShortDate(c.start);
+    document.getElementById('modal-deadline').innerText = formatShortDate(c.deadline);
+    
+    // Agar bitgan bo'lsa va topshirilgan vaqti bo'lsa, shuni ko'rsatamiz
+    if (c.progress === 100 && c.delivered && c.delivered !== '-') {
+        document.getElementById('modal-deadline').innerHTML = `<s>${formatShortDate(c.deadline)}</s> <br><span style="color:var(--green)">✅ Topshirildi: ${formatShortDate(c.delivered)}</span>`;
+    }
+    
+    document.getElementById('modal-comment').innerText = c.comment && c.comment !== '-' ? c.comment : '-';
+    
+    let statusHtml = '';
+    if (c.status === 'stopped') {
+        statusHtml = `<span style="background: rgba(239, 68, 68, 0.2); color: var(--red); padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid var(--red);">🛑 To'xtatilgan</span>`;
+    } else if (c.progress === 100) {
+        if (c.delivered && c.delivered !== '-') {
+            const diffTime = parseDate(c.delivered) - parseDate(c.deadline);
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays > 0) {
+                statusHtml = `<span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid #f59e0b;">🐌 ${diffDays} kun kechikkan</span>`;
+            } else if (diffDays < 0) {
+                statusHtml = `<span style="background: rgba(16, 185, 129, 0.2); color: var(--green); padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid var(--green);">🚀 ${Math.abs(diffDays)} kun oldin topshirildi</span>`;
+            } else {
+                statusHtml = `<span style="background: rgba(16, 185, 129, 0.2); color: var(--green); padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid var(--green);">🎯 Vaqtida topshirildi</span>`;
+            }
+        } else {
+            statusHtml = `<span style="background: rgba(16, 185, 129, 0.2); color: var(--green); padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid var(--green);">✅ Tugatilgan</span>`;
+        }
+    } else {
+        statusHtml = `<span style="background: rgba(59, 130, 246, 0.2); color: var(--primary); padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid var(--primary);">⏳ Jarayonda</span>`;
+    }
+    
+    const statusContainer = document.getElementById('modal-status-container');
+    if (statusContainer) {
+        statusContainer.innerHTML = statusHtml;
+    }
+    
+    document.getElementById('modal-progress').style.width = c.progress + '%';
+    document.getElementById('modal-progress').style.background = c.progress === 100 ? 'var(--green)' : 'var(--primary)';
+    document.getElementById('modal-progress-text').innerText = c.progress + '%';
 
-function applyBonusFilters() {
-    const search = document.getElementById("bonus-search-masul")?.value.toLowerCase() || "";
-    const status = document.getElementById("bonus-filter-status")?.value || "all";
-    const filtered = allBonusClients.filter(b => {
-        const mName = (b.masul || "").toLowerCase().includes(search);
-        const mStatus = status === "all" || b.holat === status;
-        return mName && mStatus;
-    });
-    renderBonusTable(filtered);
-}
+    const tasksList = document.getElementById('modal-tasks-list');
+    tasksList.innerHTML = '';
 
-function showProjectDetails(id) {
-    const c = allClients.find(p => String(p.id) === String(id));
-    if (!c) return;
-    document.getElementById("modalTitle").innerText = c.name;
-    document.getElementById("modalInfo").innerHTML = `<p><strong>Xodim:</strong> ${c.employee}</p><p><strong>Muddati:</strong> ${formatShortDate(c.start)} - ${formatShortDate(c.deadline)}</p>`;
-    const taskList = document.getElementById("modalTaskList");
-    taskList.innerHTML = "";
-    if (c.tasks) c.tasks.split('\n').forEach(t => { const li = document.createElement("li"); li.innerText = t; taskList.appendChild(li); });
-    document.getElementById("projectModal").classList.add("active");
-}
+    if (c.tasks) {
+        const lines = c.tasks.split('\n');
+        lines.forEach(l => {
+            const line = l.trim();
+            if (!line) return;
+            const li = document.createElement('li');
+            
+            let statusIcon = '';
+            let isDone = false;
+            let rawText = line;
+            
+            if (line.startsWith('✅') || line.startsWith('☑')) {
+                statusIcon = '✅';
+                isDone = true;
+                rawText = line.substring(1).trim();
+                li.className = 'modal-task-item done';
+            } else if (line.startsWith('☐')) {
+                statusIcon = '⏳';
+                rawText = line.substring(1).trim();
+                li.className = 'modal-task-item pending';
+            } else {
+                li.className = 'modal-task-item';
+            }
+            
+            // Extract comment
+            let taskName = rawText;
+            let taskComment = '';
+            const match = rawText.match(/^(.+?)\s*[—-]\s*(.+)$/);
+            if (match) {
+                taskName = match[1].trim();
+                taskComment = match[2].trim();
+            }
 
-function parseDate(str) { if(!str) return new Date(9999,0,1); const d = new Date(str); return isNaN(d.getTime()) ? new Date(9999,0,1) : d; }
-function formatShortDate(str) { if(!str || str === '-') return '-'; const d = new Date(str); if(isNaN(d.getTime())) return str; return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`; }
+            let innerHtml = `<div style="display: flex; align-items: center;">`;
+            if (statusIcon) innerHtml += `<span style="font-size:16px; margin-right:8px;">${statusIcon}</span>`;
+            innerHtml += `<span>${taskName}</span></div>`;
+            
+            if (taskComment) {
+                const color = isDone ? 'var(--green)' : 'var(--primary)';
+                innerHtml += `<div style="font-size: 11px; color: var(--text-secondary); margin-left: ${statusIcon ? '28px' : '0'}; margin-top: 6px; padding-left: 8px; border-left: 2px solid ${color}; opacity: 0.8;">${taskComment}</div>`;
+            }
+            
+            li.innerHTML = innerHtml;
+            tasksList.appendChild(li);
+        });
+    } else {
+        tasksList.innerHTML = '<li style="color:var(--text-secondary); padding: 10px;">Vazifalar topilmadi.</li>';
+    }
+
+    document.getElementById('projectModal').classList.add('active');
+}
