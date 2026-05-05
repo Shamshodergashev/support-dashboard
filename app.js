@@ -60,23 +60,25 @@ async function fetchData() {
     btn.disabled = true;
 
     try {
-        // Fetch Project Data
-        const projResponse = await fetch(API_URL);
-        const projData = await projResponse.json();
-        processData(projData.clients || []);
-        
-        // Fetch Bonus Data
-        const bonusResponse = await fetch(BONUS_API_URL);
-        const bonusData = await bonusResponse.json();
-        allBonusClients = bonusData.data || bonusData.clients || bonusData;
-        renderBonusTable(allBonusClients);
-        
-        const now = new Date();
-        document.getElementById("last-updated").innerText = `Oxirgi yangilanish: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+        // Fetch Main Data
+        console.log("Fetching Main API...");
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error("Main API status: " + response.status);
+        const data = await response.json();
+        allClients = data.clients || [];
+        processData(allClients);
     } catch (error) {
-        console.error("Xatolik tafsiloti:", error);
-        alert("Xatolik yuz berdi! Google Sheets API bilan bog'lanib bo'lmadi. Skript 'Anyone' ruxsati bilan deploy qilinganini tekshiring.");
-    } finally {
+        console.error("Main API Error:", error);
+    }
+
+    try {
+        // Fetch Bonus Data
+        console.log("Fetching Bonus API...");
+        const bonusResponse = await fetch(BONUS_API_URL);
+        if (!bonusResponse.ok) throw new Error("Bonus API status: " + bonusResponse.status);
+        const bonusData = await bonusResponse.json();
+        allBonusClients = bonusData.data || bonusData.clients || (Array.isArray(bonusData) ? bonusData : []);
+        renderBonusTable(allBonusClients);
         btn.innerHTML = "🔄 Yangilash";
         btn.disabled = false;
     }
