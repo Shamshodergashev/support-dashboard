@@ -77,6 +77,8 @@ async function fetchData() {
         console.error("Bonus API Error:", e);
     }
 
+    const statusText = document.getElementById("fetch-status");
+    if (statusText) statusText.style.display = "none";
     if (btn) {
         btn.innerHTML = "🔄 Yangilash";
         btn.disabled = false;
