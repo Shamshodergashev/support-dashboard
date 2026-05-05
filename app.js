@@ -47,9 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function fetchData() {
     const btn = document.getElementById("refresh-btn");
-    const statusText = document.getElementById("fetch-status");
+    const lastUpdated = document.getElementById("last-updated");
     if (btn) { btn.innerHTML = "⏳ Yangilanmoqda..."; btn.disabled = true; }
-    if (statusText) statusText.style.display = "inline";
+    if (lastUpdated) lastUpdated.innerText = "Yangilanmoqda...";
 
     try {
         const response = await fetch(API_URL);
@@ -67,10 +67,8 @@ async function fetchData() {
 
     const now = new Date();
     const timeStr = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-    const lastUpdated = document.getElementById("last-updated");
     if (lastUpdated) lastUpdated.innerText = `Yangilangan vaqti: ${timeStr}`;
 
-    if (statusText) statusText.style.display = "none";
     if (btn) { btn.innerHTML = "🔄 Yangilash"; btn.disabled = false; }
 }
 
