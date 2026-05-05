@@ -633,10 +633,17 @@ function openProjectModal(c) {
 
     document.getElementById('projectModal').classList.add('active');
 }
+let bonusChartInst = null;
+
 function renderBonusTable(bonuses) {
     const tbody = document.querySelector("#bonus-table tbody");
     if (!tbody) return;
     tbody.innerHTML = "";
+
+    let totalSum = 0;
+    let confirmedBonus = 0;
+    let pendingBonus = 0;
+    let employeeBonuses = {};
 
     bonuses.forEach(b => {
         const tr = document.createElement("tr");
@@ -646,26 +653,94 @@ function renderBonusTable(bonuses) {
         if (b.holat === "Bekor") statusClass = "text-red";
         if (b.holat === "Kutilmoqda") statusClass = "text-yellow";
 
-        const bonusVal = typeof b.bonus === 'number' ? b.bonus.toLocaleString() + " so'm" : (b.bonus || "-");
-        const summaVal = typeof b.summa === 'number' ? b.summa.toLocaleString() + " so'm" : (b.summa || "-");
+        const bonusValNum = typeof b.bonus === 'number' ? b.bonus : 0;
+        const summaValNum = typeof b.summa === 'number' ? b.summa : 0;
+        
+        totalSum += summaValNum;
+        if (b.holat === "Tasdiqlandi") {
+            confirmedBonus += bonusValNum;
+        } else if (b.holat === "Faol" || b.holat === "Kutilmoqda") {
+            pendingBonus += bonusValNum || (summaValNum); // fallback to summa if bonus column not filled but status active
+        }
+
+        // Employee stats for chart
+        if (b.masul) {
+            if (!employeeBonuses[b.masul]) employeeBonuses[b.masul] = 0;
+            if (b.holat === "Tasdiqlandi") employeeBonuses[b.masul] += bonusValNum;
+        }
+
+        const bonusVal = bonusValNum.toLocaleString() + " so'm";
+        const summaVal = summaValNum.toLocaleString() + " so'm";
 
         tr.innerHTML = `
             <td>${b.no || '-'}</td>
             <td style="font-weight: 600;">${b.mijoz}</td>
-            <td style="font-size: 12px; color: var(--text-secondary);">${b.masul}</td>
+            <td style="font-size: 13px; color: var(--text-secondary);">👤 ${b.masul}</td>
             <td style="font-size: 12px;">${formatShortDate(b.boshlanish)}</td>
             <td style="font-size: 12px;">${formatShortDate(b.tugash)}</td>
-            <td style="text-align: center;">${b.qolgan} k.</td>
+            <td style="text-align: center; font-weight: 500;">${b.qolgan} k.</td>
             <td>
-                <div style="font-size: 11px; margin-bottom: 4px;">${b.progress}</div>
+                <div style="font-size: 10px; margin-bottom: 4px; color: var(--text-secondary);">${b.progress}</div>
                 <div class="progress-bar-bg" style="height: 6px;">
                     <div class="progress-bar-fill" style="width: ${parseInt(b.progress) || 0}%; background: var(--primary)"></div>
                 </div>
             </td>
             <td style="font-weight: 600;">${summaVal}</td>
-            <td class="${statusClass}" style="font-weight: 500;">${b.holat}</td>
+            <td class="${statusClass}" style="font-weight: 600; font-size: 13px;">${b.holat}</td>
             <td class="text-green" style="font-weight: 700;">${bonusVal}</td>
         `;
         tbody.appendChild(tr);
+    });
+
+    // Update Stats
+    document.getElementById("bonus-stat-total-sum").innerText = totalSum.toLocaleString() + " so'm";
+    document.getElementById("bonus-stat-confirmed").innerText = confirmedBonus.toLocaleString() + " so'm";
+    document.getElementById("bonus-stat-pending").innerText = (totalSum - confirmedBonus).toLocaleString() + " so'm";
+
+    // Render Bonus Chart
+    renderBonusChart(employeeBonuses);
+}
+
+function renderBonusChart(empData) {
+    const labels = Object.keys(empData);
+    const data = Object.values(empData);
+
+    if (bonusChartInst) bonusChartInst.destroy();
+    
+    const ctx = document.getElementById('bonusChart');
+    if (!ctx) return;
+
+    bonusChartInst = new Chart(ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Tasdiqlangan Bonus (so\'m)',
+                data: data,
+                backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                borderColor: '#10b981',
+                borderWidth: 2,
+                borderRadius: 8,
+                hoverBackgroundColor: 'rgba(16, 185, 129, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#f8fafc', font: { family: 'Outfit' } } }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: 'Outfit' } } },
+                y: { 
+                    grid: { color: 'rgba(255,255,255,0.05)' }, 
+                    ticks: { 
+                        color: '#94a3b8', 
+                        font: { family: 'Outfit' },
+                        callback: function(value) { return value.toLocaleString(); }
+                    } 
+                }
+            }
+        }
     });
 }

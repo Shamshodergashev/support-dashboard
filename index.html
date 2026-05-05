@@ -179,9 +179,36 @@
 
             <!-- Bonus System Tab -->
             <div id="bonus-tab" class="tab-content">
+                <!-- Bonus Stats Row -->
+                <section class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-bottom: 25px;">
+                    <div class="stat-card glass-panel">
+                        <h3>Jami Summa</h3>
+                        <div class="stat-value" id="bonus-stat-total-sum">0</div>
+                        <div class="stat-icon">💰</div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <h3>Tasdiqlangan Bonus</h3>
+                        <div class="stat-value text-green" id="bonus-stat-confirmed">0</div>
+                        <div class="stat-icon">✅</div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <h3>Kutilayotgan Bonus</h3>
+                        <div class="stat-value text-yellow" id="bonus-stat-pending">0</div>
+                        <div class="stat-icon">⏳</div>
+                    </div>
+                </section>
+
+                <!-- Bonus Chart -->
+                <section class="chart-section glass-panel" style="margin-bottom: 25px; height: 350px;">
+                    <h3>Xodimlar bo'yicha Bonuslar taqsimoti</h3>
+                    <div style="width: 100%; height: 280px;">
+                        <canvas id="bonusChart"></canvas>
+                    </div>
+                </section>
+
                 <section class="projects-section glass-panel">
                     <h3 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                        <span>💰 Support Bonus Tizimi</span>
+                        <span>📊 Bonuslar Tafsiloti</span>
                         <span style="font-size: 14px; font-weight: 400; color: var(--text-secondary);">(Mijozlar Tracker v4)</span>
                     </h3>
                     <div class="table-responsive">
