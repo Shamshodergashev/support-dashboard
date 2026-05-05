@@ -1,8 +1,7 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbx7RGnvVh9NrrWcayc2xE2PXjdhX1vDRh9u12lEI-M8IlOzr-QVyIicTCkNZvwPwlFK/exec";
 const BONUS_API_URL = "https://script.google.com/macros/s/AKfycbxAEtiWND4lvN9oYJx2PyAdw6EVulAEPhKJjB66eDeN7DADUlUjbz_P07rCcJYFcrOW8w/exec";
-let empProjChartInst = null;
-let empTaskChartInst = null;
 let allClients = [];
+let allBonusClients = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     fetchData();
@@ -47,6 +46,12 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById(tabId).classList.add('active');
         });
     });
+
+    // Bonus Filter Listeners
+    const bonusSearch = document.getElementById("bonus-search-masul");
+    const bonusStatusFilter = document.getElementById("bonus-filter-status");
+    if(bonusSearch) bonusSearch.addEventListener("input", applyBonusFilters);
+    if(bonusStatusFilter) bonusStatusFilter.addEventListener("change", applyBonusFilters);
 });
 
 async function fetchData() {
@@ -63,7 +68,8 @@ async function fetchData() {
         // Fetch Bonus Data
         const bonusResponse = await fetch(BONUS_API_URL);
         const bonusData = await bonusResponse.json();
-        renderBonusTable(bonusData.data || []);
+        allBonusClients = bonusData.clients || bonusData;
+        renderBonusTable(allBonusClients);
         
         const now = new Date();
         document.getElementById("last-updated").innerText = `Oxirgi yangilanish: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -707,6 +713,19 @@ function renderBonusTable(bonuses) {
 
     // Render Rankings
     renderRankings(employeeBonuses);
+}
+
+function applyBonusFilters() {
+    const searchVal = document.getElementById("bonus-search-masul").value.toLowerCase();
+    const statusVal = document.getElementById("bonus-filter-status").value;
+
+    const filtered = allBonusClients.filter(b => {
+        const matchesName = (b.masul || "").toLowerCase().includes(searchVal);
+        const matchesStatus = statusVal === "all" || b.holat === statusVal;
+        return matchesName && matchesStatus;
+    });
+
+    renderBonusTable(filtered);
 }
 
 function renderRankings(empBonuses) {
