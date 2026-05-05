@@ -52,10 +52,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function fetchData() {
     const btn = document.getElementById("refresh-btn");
+    const statusText = document.getElementById("fetch-status");
     if (btn) {
         btn.innerHTML = "⏳ Yangilanmoqda...";
         btn.disabled = true;
     }
+    if (statusText) statusText.style.display = "inline";
 
     try {
         const response = await fetch(API_URL);
@@ -75,7 +77,12 @@ async function fetchData() {
         console.error("Bonus API Error:", e);
     }
 
-    const statusText = document.getElementById("fetch-status");
+    // Update time
+    const now = new Date();
+    const timeStr = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const lastUpdated = document.getElementById("last-updated");
+    if (lastUpdated) lastUpdated.innerText = `Yangilangan vaqti: ${timeStr}`;
+
     if (statusText) statusText.style.display = "none";
     if (btn) {
         btn.innerHTML = "🔄 Yangilash";
@@ -84,7 +91,6 @@ async function fetchData() {
 }
 
 function processData(clients) {
-    let emps = new Set();
     clients.forEach(c => {
         let done = 0, pending = 0;
         if (c.tasks) {
@@ -98,9 +104,11 @@ function processData(clients) {
         c.pendingTasks = pending;
         c.totalTasks = done + pending;
         c.progressVal = c.totalTasks === 0 ? 0 : Math.round((done / c.totalTasks) * 100);
-        if (c.employee) emps.add(c.employee);
     });
 
+    // Populate Emp Dropdown
+    const emps = new Set();
+    clients.forEach(c => { if(c.employee) emps.add(c.employee); });
     const empSelect = document.getElementById("filter-employee");
     if (empSelect) {
         const currentVal = empSelect.value;
@@ -146,7 +154,7 @@ function renderDashboard(clients) {
 
     clients.forEach(c => {
         totalT += c.totalTasks; doneT += c.doneTasks; pendingT += c.pendingTasks;
-        const e = c.employee || "Noma'lum";
+        const e = c.employee || "Biriktirilmagan";
         if (!empStats[e]) empStats[e] = { pDone: 0, pActive: 0, tDone: 0, tPending: 0 };
         if (c.progressVal === 100) empStats[e].pDone++; else empStats[e].pActive++;
         empStats[e].tDone += c.doneTasks; empStats[e].tPending += c.pendingTasks;
@@ -157,6 +165,7 @@ function renderDashboard(clients) {
     el("stat-task-total", totalT); el("stat-task-done", doneT); el("stat-task-pending", pendingT);
 
     renderCharts(empStats);
+    renderLists(clients);
     renderTable(clients);
 }
 
@@ -179,11 +188,11 @@ function renderCharts(stats) {
         });
     }
 
+    if (empTaskChartInst) empTaskChartInst.destroy();
     const ctx2 = document.getElementById('empTasksChart');
     if (ctx2) {
         const tDone = labels.map(l => stats[l].tDone);
         const tPending = labels.map(l => stats[l].tPending);
-        if (empTaskChartInst) empTaskChartInst.destroy();
         empTaskChartInst = new Chart(ctx2.getContext('2d'), {
             type: 'bar',
             data: { labels, datasets: [
@@ -195,27 +204,41 @@ function renderCharts(stats) {
     }
 }
 
+function renderLists(clients) {
+    const overdueList = document.getElementById("overdue-list");
+    const upcomingList = document.getElementById("upcoming-list");
+    const completedList = document.getElementById("completed-list");
+    const stoppedList = document.getElementById("stopped-list");
+    const activeTaskList = document.getElementById("active-task-list");
+
+    if(overdueList) overdueList.innerHTML = "";
+    if(upcomingList) upcomingList.innerHTML = "";
+    if(completedList) completedList.innerHTML = "";
+    if(stoppedList) stoppedList.innerHTML = "";
+    if(activeTaskList) activeTaskList.innerHTML = "";
+
+    const now = new Date(); now.setHours(0,0,0,0);
+
+    clients.forEach(c => {
+        const dLine = parseDate(c.deadline);
+        const itemHtml = `<div class="status-item"><span>${c.name}</span> <small>${c.employee || '-'}</small></div>`;
+        if (c.status === 'stopped') { if(stoppedList) stoppedList.innerHTML += itemHtml; }
+        else if (c.progressVal === 100) { if(completedList) completedList.innerHTML += itemHtml; }
+        else {
+            if (dLine < now && dLine.getFullYear() !== 9999) { if(overdueList) overdueList.innerHTML += itemHtml; }
+            else if (dLine <= new Date(now.getTime() + 3*24*60*60*1000)) { if(upcomingList) upcomingList.innerHTML += itemHtml; }
+            if(activeTaskList) activeTaskList.innerHTML += itemHtml;
+        }
+    });
+}
+
 function renderTable(clients) {
     const tbody = document.getElementById("projects-body");
     if (!tbody) return;
     tbody.innerHTML = "";
     clients.forEach(c => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${c.id || '-'}</td>
-            <td><div class="client-name-cell"><strong>${c.name}</strong></div></td>
-            <td>${c.employee || '-'}</td>
-            <td>${formatShortDate(c.start)}</td>
-            <td>${formatShortDate(c.deadline)}</td>
-            <td>
-                <div class="progress-container">
-                    <div class="progress-bar" style="width: ${c.progressVal}%"></div>
-                    <span class="progress-text">${c.progressVal}%</span>
-                </div>
-            </td>
-            <td><span class="status-badge ${c.progressVal === 100 ? 'status-completed' : 'status-active'}">${c.progressVal === 100 ? 'Bitgan' : 'Jarayonda'}</span></td>
-            <td><button class="btn-view" onclick="showProjectDetails('${c.id}')">👁</button></td>
-        `;
+        tr.innerHTML = `<td>${c.id || '-'}</td><td><strong>${c.name}</strong></td><td>${c.employee || '-'}</td><td>${formatShortDate(c.start)}</td><td>${formatShortDate(c.deadline)}</td><td><div class="progress-container"><div class="progress-bar" style="width: ${c.progressVal}%"></div><span class="progress-text">${c.progressVal}%</span></div></td><td><span class="status-badge ${c.progressVal === 100 ? 'status-completed' : 'status-active'}">${c.progressVal === 100 ? 'Bitgan' : 'Jarayonda'}</span></td><td><button class="btn-view" onclick="showProjectDetails('${c.id}')">👁</button></td>`;
         tbody.appendChild(tr);
     });
 }
@@ -226,18 +249,7 @@ function renderBonusTable(data) {
     tbody.innerHTML = "";
     data.forEach(b => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${b.no || '-'}</td>
-            <td><strong>${b.mijoz || '-'}</strong></td>
-            <td>${b.masul || '-'}</td>
-            <td>${formatShortDate(b.boshlanish)}</td>
-            <td>${formatShortDate(b.tugash)}</td>
-            <td>${b.qolgan || '-'}</td>
-            <td><div class="bonus-progress">${b.progress || '-'}</div></td>
-            <td>${Number(b.summa || 0).toLocaleString()}</td>
-            <td><span class="status-badge">${b.holat || '-'}</span></td>
-            <td class="bonus-amount">${Number(b.bonus || 0).toLocaleString()}</td>
-        `;
+        tr.innerHTML = `<td>${b.no || '-'}</td><td><strong>${b.mijoz || '-'}</strong></td><td>${b.masul || '-'}</td><td>${formatShortDate(b.boshlanish)}</td><td>${formatShortDate(b.tugash)}</td><td>${b.qolgan || '-'}</td><td><div class="bonus-progress">${b.progress || '-'}</div></td><td>${Number(b.summa || 0).toLocaleString()}</td><td><span class="status-badge">${b.holat || '-'}</span></td><td class="bonus-amount">${Number(b.bonus || 0).toLocaleString()}</td>`;
         tbody.appendChild(tr);
     });
 }
