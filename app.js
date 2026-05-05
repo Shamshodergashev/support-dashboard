@@ -150,13 +150,15 @@ function applyFilters() {
 }
 
 function renderDashboard(clients) {
-    // Stats
+    // Stats calculation
     let totalP = clients.length;
     let doneP = clients.filter(c => c.progressVal === 100).length;
     let activeP = totalP - doneP;
     
     let totalT = 0, doneT = 0, pendingT = 0;
     let empStats = {};
+    
+    const now = new Date();
 
     clients.forEach(c => {
         totalT += c.totalTasks;
@@ -179,6 +181,7 @@ function renderDashboard(clients) {
     el("stat-task-pending", pendingT);
 
     renderCharts(empStats);
+    renderLists(clients); // Pastdagi ro'yxatlar
     renderTable(clients);
 }
 
@@ -186,40 +189,91 @@ function renderCharts(stats) {
     const labels = Object.keys(stats);
     const pDone = labels.map(l => stats[l].pDone);
     const pActive = labels.map(l => stats[l].pActive);
-    const tDone = labels.map(l => stats[l].tDone);
-    const tPending = labels.map(l => stats[l].tPending);
 
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { x: { stacked: true }, y: { stacked: true } }
-    };
-
-    if (empProjChartInst) empProjChartInst.destroy();
     const ctx1 = document.getElementById('empProjectsChart');
     if (ctx1) {
-        empProjChartInst = new Chart(ctx1.getContext('2d'), {
+        const grd1 = ctx1.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        grd1.addColorStop(0, '#10b981'); grd1.addColorStop(1, '#059669');
+        const grd2 = ctx1.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        grd2.addColorStop(0, '#f59e0b'); grd2.addColorStop(1, '#d97706');
+
+        if (empProjChartInst) empProjChartInst.destroy();
+        empProjChartInst = new Chart(ctx1, {
             type: 'bar',
             data: { labels, datasets: [
-                { label: 'Bitgan', data: pDone, backgroundColor: '#10b981' },
-                { label: 'Jarayonda', data: pActive, backgroundColor: '#f59e0b' }
+                { label: 'Bitgan', data: pDone, backgroundColor: grd1, borderRadius: 6 },
+                { label: 'Jarayonda', data: pActive, backgroundColor: grd2, borderRadius: 6 }
             ]},
-            options
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
         });
     }
 
-    if (empTaskChartInst) empTaskChartInst.destroy();
-    const ctx2 = document.getElementById('empTasksChart');
-    if (ctx2) {
-        empTaskChartInst = new Chart(ctx2.getContext('2d'), {
-            type: 'bar',
-            data: { labels, datasets: [
-                { label: '✅', data: tDone, backgroundColor: '#10b981' },
-                { label: '☐', data: tPending, backgroundColor: '#3b82f6' }
-            ]},
-            options
+    // BONUS DOUGHNUT CHART (WOW Effect)
+    const ctxD = document.getElementById('bonusDoughnutChart');
+    if (ctxD) {
+        let bDone = 0, bPending = 0;
+        allBonusClients.forEach(b => {
+            if (b.holat === 'Tasdiqlandi') bDone += Number(b.bonus || 0);
+            else bPending += Number(b.bonus || 0);
         });
+
+        if (window.bonusChartInst) window.bonusChartInst.destroy();
+        window.bonusChartInst = new Chart(ctxD, {
+            type: 'doughnut',
+            data: {
+                labels: ['Tasdiqlandi', 'Kutilmoqda'],
+                datasets: [{
+                    data: [bDone, bPending],
+                    backgroundColor: ['#10b981', '#3b82f6'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                cutout: '75%',
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+        const bonusTotalEl = document.getElementById('bonus-total-amount');
+        if (bonusTotalEl) bonusTotalEl.innerText = bDone.toLocaleString() + ' UZS';
     }
+}
+
+function renderLists(clients) {
+    const overdueList = document.getElementById("overdue-list");
+    const upcomingList = document.getElementById("upcoming-list");
+    const completedList = document.getElementById("completed-list");
+    const stoppedList = document.getElementById("stopped-list");
+    const activeTaskList = document.getElementById("active-task-list");
+
+    if(overdueList) overdueList.innerHTML = "";
+    if(upcomingList) upcomingList.innerHTML = "";
+    if(completedList) completedList.innerHTML = "";
+    if(stoppedList) stoppedList.innerHTML = "";
+    if(activeTaskList) activeTaskList.innerHTML = "";
+
+    const now = new Date();
+    now.setHours(0,0,0,0);
+
+    clients.forEach(c => {
+        const dLine = parseDate(c.deadline);
+        const itemHtml = `<div class="status-item"><span>${c.name}</span> <small>${c.employee}</small></div>`;
+
+        if (c.status === 'stopped') {
+            if(stoppedList) stoppedList.innerHTML += itemHtml;
+        } else if (c.progressVal === 100) {
+            if(completedList) completedList.innerHTML += itemHtml;
+        } else {
+            if (dLine < now && dLine.getFullYear() !== 9999) {
+                if(overdueList) overdueList.innerHTML += itemHtml;
+            } else if (dLine <= new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)) {
+                if(upcomingList) upcomingList.innerHTML += itemHtml;
+            }
+            if(activeTaskList) activeTaskList.innerHTML += itemHtml;
+        }
+    });
 }
 
 function renderTable(clients) {
