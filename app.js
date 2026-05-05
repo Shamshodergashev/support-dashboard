@@ -74,8 +74,8 @@ async function fetchData() {
         const now = new Date();
         document.getElementById("last-updated").innerText = `Oxirgi yangilanish: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
     } catch (error) {
-        console.error("Xatolik yuz berdi:", error);
-        alert("Ma'lumotlarni yuklab bo'lmadi!");
+        console.error("Xatolik tafsiloti:", error);
+        alert("Xatolik yuz berdi! Google Sheets API bilan bog'lanib bo'lmadi. Skript 'Anyone' ruxsati bilan deploy qilinganini tekshiring.");
     } finally {
         btn.innerHTML = "🔄 Yangilash";
         btn.disabled = false;
