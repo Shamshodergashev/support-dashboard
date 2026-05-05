@@ -9,29 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="main-layout">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar glass-panel">
-            <div class="sidebar-logo">Support System</div>
-            <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" data-tab="projects-tab">
-                    <span class="nav-icon">📊</span>
-                    <span class="nav-text">Loyiha Nazorati</span>
-                </a>
-                <a href="#" class="nav-item" data-tab="bonus-tab">
-                    <span class="nav-icon">💰</span>
-                    <span class="nav-text">Bonus Tizimi</span>
-                </a>
-                <a href="#" class="nav-item" data-tab="quality-tab">
-                    <span class="nav-icon">⚡</span>
-                    <span class="nav-text">Xizmat Sifati</span>
-                </a>
-            </nav>
-        </aside>
-
-        <div class="dashboard-container">
-            <!-- Project Tab (Existing Content) -->
-            <div id="projects-tab" class="tab-content active">
+    <div class="dashboard-container">
         <!-- Header -->
         <header class="glass-panel">
             <div class="logo">🚀 Support Dashboard</div>
@@ -175,73 +153,6 @@
                 </table>
             </div>
         </section>
-            </div>
-
-            <!-- Bonus System Tab -->
-            <div id="bonus-tab" class="tab-content">
-                <!-- Bonus Stats Row -->
-                <section class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-bottom: 25px;">
-                    <div class="stat-card glass-panel">
-                        <h3>Jami Summa</h3>
-                        <div class="stat-value" id="bonus-stat-total-sum">0</div>
-                        <div class="stat-icon">💰</div>
-                    </div>
-                    <div class="stat-card glass-panel">
-                        <h3>Tasdiqlangan Bonus</h3>
-                        <div class="stat-value text-green" id="bonus-stat-confirmed">0</div>
-                        <div class="stat-icon">✅</div>
-                    </div>
-                    <div class="stat-card glass-panel">
-                        <h3>Kutilayotgan Bonus</h3>
-                        <div class="stat-value text-yellow" id="bonus-stat-pending">0</div>
-                        <div class="stat-icon">⏳</div>
-                    </div>
-                </section>
-
-                <!-- Bonus Chart -->
-                <section class="chart-section glass-panel" style="margin-bottom: 25px; height: 350px;">
-                    <h3>Xodimlar bo'yicha Bonuslar taqsimoti</h3>
-                    <div style="width: 100%; height: 280px;">
-                        <canvas id="bonusChart"></canvas>
-                    </div>
-                </section>
-
-                <section class="projects-section glass-panel">
-                    <h3 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                        <span>📊 Bonuslar Tafsiloti</span>
-                        <span style="font-size: 14px; font-weight: 400; color: var(--text-secondary);">(Mijozlar Tracker v4)</span>
-                    </h3>
-                    <div class="table-responsive">
-                        <table id="bonus-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Mijoz</th>
-                                    <th>Mas'ul</th>
-                                    <th>Boshlanish</th>
-                                    <th>Tugash</th>
-                                    <th>Qolgan</th>
-                                    <th style="width: 150px;">Progress</th>
-                                    <th>Summa</th>
-                                    <th>Holat</th>
-                                    <th>Tasdiq Bonus</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- JS fills this -->
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
-
-            <!-- Quality Analytics Tab -->
-            <div id="quality-tab" class="tab-content">
-                <div class="glass-panel" style="padding: 100px 40px; text-align: center; height: 100vh;">
-                    <h2 style="color: var(--text-secondary); font-weight: 400;">Xizmat Sifati va Tezlik (Tez orada)</h2>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Project Details Modal -->
