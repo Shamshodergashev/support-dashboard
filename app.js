@@ -27,6 +27,25 @@ document.addEventListener("DOMContentLoaded", () => {
             if(e.target === modal) modal.classList.remove('active');
         });
     }
+
+    // Tab Switching Logic
+    const navItems = document.querySelectorAll('.nav-item');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabId = item.getAttribute('data-tab');
+
+            // Update active nav item
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+
+            // Update active tab content
+            tabContents.forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+        });
+    });
 });
 
 async function fetchData() {

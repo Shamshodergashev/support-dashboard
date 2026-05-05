@@ -9,7 +9,29 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="dashboard-container">
+    <div class="main-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-logo">🚀 Support</div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-tab="projects-tab">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Loyiha Nazorati</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="bonus-tab">
+                    <span class="nav-icon">💰</span>
+                    <span class="nav-text">Bonus Tizimi</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="quality-tab">
+                    <span class="nav-icon">⚡</span>
+                    <span class="nav-text">Xizmat Sifati</span>
+                </a>
+            </nav>
+        </aside>
+
+        <div class="dashboard-container">
+            <!-- Project Tab (Existing Content) -->
+            <div id="projects-tab" class="tab-content active">
         <!-- Header -->
         <header class="glass-panel">
             <div class="logo">🚀 Support Dashboard</div>
@@ -153,6 +175,26 @@
                 </table>
             </div>
         </section>
+            </div>
+
+            <!-- Bonus System Tab -->
+            <div id="bonus-tab" class="tab-content">
+                <div class="glass-panel" style="padding: 40px; text-align: center;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">💰</div>
+                    <h2>Support Bonus Tizimi</h2>
+                    <p style="color: var(--text-secondary); margin-top: 10px;">Xodimlar uchun mukofot va rag'batlantirish tizimi tez orada bu yerda paydo bo'ladi.</p>
+                </div>
+            </div>
+
+            <!-- Quality Analytics Tab -->
+            <div id="quality-tab" class="tab-content">
+                <div class="glass-panel" style="padding: 40px; text-align: center;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">⚡</div>
+                    <h2>Xizmat Sifati va Tezlik</h2>
+                    <p style="color: var(--text-secondary); margin-top: 10px;">Xodimlarning mijozlarga javob berish tezligi va sifatini tahlil qilish tizimi ishlab chiqilmoqda.</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Project Details Modal -->
