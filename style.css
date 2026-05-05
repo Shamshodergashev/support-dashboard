@@ -1,0 +1,348 @@
+:root {
+    --bg-color: #0f172a;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --glass-bg: rgba(30, 41, 59, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg-color);
+    background-image: 
+        radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.15) 0%, transparent 50%);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.dashboard-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Header */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.logo {
+    font-size: 24px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+#last-updated {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    transition: background 0.3s, transform 0.2s;
+}
+.btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+/* Stats */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+.stat-card {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s;
+}
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+.stat-card h3 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+.deadline-date {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-overlay.active {
+    display: flex;
+}
+.modal-content {
+    width: 90%;
+    max-width: 500px;
+    background: var(--bg-color); /* Fallback */
+    background: rgba(20, 25, 35, 0.95);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    animation: fadeIn 0.3s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 10px;
+}
+.btn-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+.btn-close:hover {
+    color: var(--red);
+}
+.modal-info p {
+    margin: 5px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+.modal-info strong {
+    color: white;
+}
+.modal-tasks {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.modal-task-item {
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.03);
+    margin-bottom: 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+}
+.modal-task-item.done {
+    border-left: 3px solid var(--green);
+    color: rgba(255,255,255,0.8);
+}
+.modal-task-item.pending {
+    border-left: 3px solid var(--yellow);
+    color: rgba(255,255,255,0.9);
+}
+#projects-table tbody tr {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#projects-table tbody tr:hover {
+    background: rgba(255,255,255,0.08);
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.stat-value {
+    font-size: 36px;
+    font-weight: 700;
+}
+.text-green { color: var(--green); }
+.text-yellow { color: var(--yellow); }
+.text-red { color: var(--red); }
+.stat-icon {
+    position: absolute;
+    right: -10px;
+    bottom: -10px;
+    font-size: 80px;
+    opacity: 0.1;
+}
+
+/* Grid Layouts */
+.chart-section {
+    width: 100%;
+}
+.lists-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+@media (max-width: 1024px) {
+    .lists-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.chart-section h3, .deadlines-container h3, .projects-section h3 {
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 10px;
+}
+
+/* Deadlines List */
+.deadline-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Custom Scrollbar for lists */
+.deadline-list::-webkit-scrollbar {
+    width: 6px;
+}
+.deadline-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 4px;
+}
+.deadline-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+.deadline-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+.deadline-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 4px solid var(--primary);
+    transition: transform 0.2s, background 0.2s;
+}
+.deadline-item:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.1);
+}
+.deadline-item.danger {
+    border-left-color: var(--red);
+    background: rgba(239, 68, 68, 0.1);
+}
+.deadline-item.warning {
+    border-left-color: var(--yellow);
+}
+.deadline-info strong {
+    display: block;
+    font-size: 15px;
+}
+.deadline-info span {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.deadline-date {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* Table */
+.table-responsive {
+    overflow-x: auto;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+th, td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--glass-border);
+}
+th {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 14px;
+}
+td {
+    font-size: 14px;
+    vertical-align: middle;
+}
+tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Progress Bar */
+.progress-bar-bg {
+    background: rgba(255, 255, 255, 0.1);
+    height: 8px;
+    border-radius: 4px;
+    width: 100px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+.progress-bar-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
+}
+.progress-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
