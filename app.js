@@ -633,7 +633,8 @@ function openProjectModal(c) {
 
     document.getElementById('projectModal').classList.add('active');
 }
-let bonusChartInst = null;
+let bonusStatusChartInst = null;
+let bonusPerformanceChartInst = null;
 
 function renderBonusTable(bonuses) {
     const tbody = document.querySelector("#bonus-table tbody");
@@ -659,14 +660,14 @@ function renderBonusTable(bonuses) {
         totalSum += summaValNum;
         if (b.holat === "Tasdiqlandi") {
             confirmedBonus += bonusValNum;
-        } else if (b.holat === "Faol" || b.holat === "Kutilmoqda") {
-            pendingBonus += bonusValNum || (summaValNum); // fallback to summa if bonus column not filled but status active
+        } else {
+            pendingBonus += bonusValNum;
         }
 
         // Employee stats for chart
         if (b.masul) {
             if (!employeeBonuses[b.masul]) employeeBonuses[b.masul] = 0;
-            if (b.holat === "Tasdiqlandi") employeeBonuses[b.masul] += bonusValNum;
+            employeeBonuses[b.masul] += bonusValNum;
         }
 
         const bonusVal = bonusValNum.toLocaleString() + " so'm";
@@ -696,9 +697,13 @@ function renderBonusTable(bonuses) {
     document.getElementById("bonus-stat-total-sum").innerText = totalSum.toLocaleString() + " so'm";
     document.getElementById("bonus-stat-confirmed").innerText = confirmedBonus.toLocaleString() + " so'm";
     document.getElementById("bonus-stat-pending").innerText = (totalSum - confirmedBonus).toLocaleString() + " so'm";
+    
+    // Update Central Display
+    const totalDisplay = document.getElementById("total-bonus-display");
+    if(totalDisplay) totalDisplay.innerText = confirmedBonus.toLocaleString();
 
-    // Render Bonus Chart
-    renderBonusChart(employeeBonuses);
+    // Render WOW Charts
+    renderWowCharts(confirmedBonus, pendingBonus, employeeBonuses);
 
     // Render Rankings
     renderRankings(employeeBonuses);
@@ -733,46 +738,80 @@ function renderRankings(empBonuses) {
     }
 }
 
-function renderBonusChart(empData) {
-    const labels = Object.keys(empData);
-    const data = Object.values(empData);
-
-    if (bonusChartInst) bonusChartInst.destroy();
-    
-    const ctx = document.getElementById('bonusChart');
-    if (!ctx) return;
-
-    bonusChartInst = new Chart(ctx.getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Tasdiqlangan Bonus (so\'m)',
-                data: data,
-                backgroundColor: 'rgba(16, 185, 129, 0.6)',
-                borderColor: '#10b981',
-                borderWidth: 2,
-                borderRadius: 8,
-                hoverBackgroundColor: 'rgba(16, 185, 129, 0.8)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { labels: { color: '#f8fafc', font: { family: 'Outfit' } } }
+function renderWowCharts(confirmed, pending, empData) {
+    // 1. Status Doughnut Chart
+    const statusCtx = document.getElementById('bonusStatusChart');
+    if (statusCtx) {
+        if (bonusStatusChartInst) bonusStatusChartInst.destroy();
+        bonusStatusChartInst = new Chart(statusCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Tasdiqlangan', 'Kutilmoqda'],
+                datasets: [{
+                    data: [confirmed, pending],
+                    backgroundColor: ['#10b981', 'rgba(245, 158, 11, 0.2)'],
+                    borderColor: ['#10b981', '#f59e0b'],
+                    borderWidth: 2,
+                    hoverOffset: 10,
+                    cutout: '75%'
+                }]
             },
-            scales: {
-                x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: 'Outfit' } } },
-                y: { 
-                    grid: { color: 'rgba(255,255,255,0.05)' }, 
-                    ticks: { 
-                        color: '#94a3b8', 
-                        font: { family: 'Outfit' },
-                        callback: function(value) { return value.toLocaleString(); }
-                    } 
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                animation: { animateRotate: true, duration: 2000 }
+            }
+        });
+    }
+
+    // 2. Performance Gradient Bar Chart
+    const perfCtx = document.getElementById('bonusPerformanceChart');
+    if (perfCtx) {
+        const ctx = perfCtx.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 400, 0);
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.8)');
+
+        if (bonusPerformanceChartInst) bonusPerformanceChartInst.destroy();
+        
+        const labels = Object.keys(empData);
+        const values = Object.values(empData);
+
+        bonusPerformanceChartInst = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Bonus yig\'imi (so\'m)',
+                    data: values,
+                    backgroundColor: gradient,
+                    borderRadius: 10,
+                    borderSkipped: false,
+                    barThickness: 25
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { 
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8', font: { family: 'Outfit' }, callback: v => v.toLocaleString() }
+                    },
+                    y: { 
+                        grid: { display: false },
+                        ticks: { color: 'white', font: { family: 'Outfit', weight: '500' } }
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 }
+
