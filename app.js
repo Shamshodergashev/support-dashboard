@@ -231,6 +231,17 @@ function renderDashboardElements(clients) {
         }
     });
 
+    // Apply strict visualization filters to remove opposing colors in charts
+    Object.keys(chartEmployeeData).forEach(emp => {
+        if (activeCardFilter === "done_projects" || activeCardFilter === "done_tasks") {
+            chartEmployeeData[emp].projPending = 0; // Hide yellow (pending projects)
+            chartEmployeeData[emp].taskPending = 0; // Hide blue (pending tasks)
+        } else if (activeCardFilter === "pending_projects" || activeCardFilter === "pending_tasks") {
+            chartEmployeeData[emp].projDone = 0;    // Hide green (done projects)
+            chartEmployeeData[emp].taskDone = 0;    // Hide green (done tasks)
+        }
+    });
+
     // Render Charts (filtered)
     renderCharts(chartEmployeeData);
 
