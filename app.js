@@ -1,23 +1,43 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbx7RGnvVh9NrrWcayc2xE2PXjdhX1vDRh9u12lEI-M8IlOzr-QVyIicTCkNZvwPwlFK/exec";
-const BONUS_API_URL = "https://script.google.com/macros/s/AKfycbxAEtiWND4lvN9oYJx2PyAdw6EVulAEPhKJjB66eDeN7DADUlUjbz_P07rCcJYFcrOW8w/exec";
 let empProjChartInst = null;
 let empTaskChartInst = null;
 let allClients = [];
+let activeCardFilter = "all";
 
 document.addEventListener("DOMContentLoaded", () => {
     fetchData();
     document.getElementById("refresh-btn").addEventListener("click", fetchData);
-    
+
     // Filter listeners
     const searchInput = document.getElementById("search-input");
     const empFilter = document.getElementById("filter-employee");
     const startFilter = document.getElementById("filter-start");
     const deadlineFilter = document.getElementById("filter-deadline");
-    
-    if(searchInput) searchInput.addEventListener("input", applyFilters);
-    if(empFilter) empFilter.addEventListener("change", applyFilters);
-    if(startFilter) startFilter.addEventListener("change", applyFilters);
-    if(deadlineFilter) deadlineFilter.addEventListener("change", applyFilters);
+
+    if (searchInput) searchInput.addEventListener("input", applyFilters);
+    if (empFilter) empFilter.addEventListener("change", applyFilters);
+    if (startFilter) startFilter.addEventListener("change", applyFilters);
+    if (deadlineFilter) deadlineFilter.addEventListener("change", applyFilters);
+
+    // Stat cards click event listeners
+    const cardFilters = {
+        "card-proj-total": "all",
+        "card-proj-done": "done_projects",
+        "card-proj-pending": "pending_projects",
+        "card-proj-stopped": "stopped_projects",
+        "card-task-total": "total_tasks",
+        "card-task-done": "done_tasks",
+        "card-task-pending": "pending_tasks"
+    };
+
+    Object.keys(cardFilters).forEach(cardId => {
+        const cardEl = document.getElementById(cardId);
+        if (cardEl) {
+            cardEl.addEventListener("click", () => {
+                setCardFilter(cardFilters[cardId]);
+            });
+        }
+    });
 
     // Modal Close logic
     const closeBtn = document.getElementById('closeModal');
@@ -25,28 +45,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('active'));
     if (modal) {
         modal.addEventListener('click', (e) => {
-            if(e.target === modal) modal.classList.remove('active');
+            if (e.target === modal) modal.classList.remove('active');
         });
     }
-
-    // Tab Switching Logic
-    const navItems = document.querySelectorAll('.nav-item');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const tabId = item.getAttribute('data-tab');
-
-            // Update active nav item
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
-
-            // Update active tab content
-            tabContents.forEach(tab => tab.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-        });
-    });
 });
 
 async function fetchData() {
@@ -55,16 +56,10 @@ async function fetchData() {
     btn.disabled = true;
 
     try {
-        // Fetch Project Data
-        const projResponse = await fetch(API_URL);
-        const projData = await projResponse.json();
-        processData(projData.clients || []);
-        
-        // Fetch Bonus Data
-        const bonusResponse = await fetch(BONUS_API_URL);
-        const bonusData = await bonusResponse.json();
-        renderBonusTable(bonusData.data || []);
-        
+        const response = await fetch(API_URL);
+        const data = await response.json();
+        processData(data.clients || []);
+
         const now = new Date();
         document.getElementById("last-updated").innerText = `Oxirgi yangilanish: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
     } catch (error) {
@@ -93,7 +88,7 @@ function processData(clients) {
         c.pendingTasks = pending;
         c.totalTasks = done + pending;
         c.progress = c.totalTasks === 0 ? 0 : Math.round((done / c.totalTasks) * 100);
-        
+
         if (c.employee) emps.add(c.employee);
     });
 
@@ -126,20 +121,20 @@ function applyFilters() {
     const filteredClients = allClients.filter(c => {
         const matchName = c.name.toLowerCase().includes(searchText);
         const matchEmp = empFilter === "all" || (c.employee || "Biriktirilmagan") === empFilter;
-        
+
         let matchStart = true;
         let matchDeadline = true;
 
         if (startFilter) {
             const fDate = new Date(startFilter);
-            fDate.setHours(0,0,0,0);
+            fDate.setHours(0, 0, 0, 0);
             const cDate = parseDate(c.start);
             if (cDate.getFullYear() === 9999 || cDate < fDate) matchStart = false;
         }
 
         if (deadlineFilter) {
             const fDate = new Date(deadlineFilter);
-            fDate.setHours(23,59,59,999);
+            fDate.setHours(23, 59, 59, 999);
             const cDate = parseDate(c.deadline);
             if (cDate.getFullYear() === 9999 || cDate > fDate) matchDeadline = false;
         }
@@ -154,11 +149,11 @@ function renderDashboardElements(clients) {
     let totalProjects = clients.length;
     let doneProjects = 0;
     let pendingProjects = 0;
-    
+
     let totalTasks = 0;
     let totalDoneTasks = 0;
     let totalPendingTasks = 0;
-    
+
     let employeeData = {};
 
     let stoppedProjects = 0;
@@ -176,7 +171,7 @@ function renderDashboardElements(clients) {
         if (!employeeData[emp]) {
             employeeData[emp] = { projDone: 0, projPending: 0, taskDone: 0, taskPending: 0 };
         }
-        
+
         if (c.status !== 'stopped') {
             if (c.progress === 100) employeeData[emp].projDone++;
             else employeeData[emp].projPending++;
@@ -186,22 +181,49 @@ function renderDashboardElements(clients) {
     });
 
     // Update Top Stats
-    const tp = document.getElementById("stat-proj-total"); if(tp) tp.innerText = totalProjects;
-    const dp = document.getElementById("stat-proj-done"); if(dp) dp.innerText = doneProjects;
-    const pp = document.getElementById("stat-proj-pending"); if(pp) pp.innerText = pendingProjects;
-    
-    const tt = document.getElementById("stat-task-total"); if(tt) tt.innerText = totalTasks;
-    const dt = document.getElementById("stat-task-done"); if(dt) dt.innerText = totalDoneTasks;
-    const pt = document.getElementById("stat-task-pending"); if(pt) pt.innerText = totalPendingTasks;
+    const tp = document.getElementById("stat-proj-total"); if (tp) tp.innerText = totalProjects;
+    const dp = document.getElementById("stat-proj-done"); if (dp) dp.innerText = doneProjects;
+    const pp = document.getElementById("stat-proj-pending"); if (pp) pp.innerText = pendingProjects;
+    const sp = document.getElementById("stat-proj-stopped-val"); if (sp) sp.innerText = stoppedProjects;
+
+    const tt = document.getElementById("stat-task-total"); if (tt) tt.innerText = totalTasks;
+    const dt = document.getElementById("stat-task-done"); if (dt) dt.innerText = totalDoneTasks;
+    const pt = document.getElementById("stat-task-pending"); if (pt) pt.innerText = totalPendingTasks;
 
     // Render Charts
     renderCharts(employeeData);
 
+    // Filter lists and table if activeCardFilter is set
+    let cardFiltered = clients;
+    if (activeCardFilter !== "all") {
+        cardFiltered = clients.filter(c => {
+            if (activeCardFilter === "done_projects") {
+                return c.progress === 100 && c.status !== 'stopped';
+            }
+            if (activeCardFilter === "pending_projects") {
+                return c.progress < 100 && c.status !== 'stopped';
+            }
+            if (activeCardFilter === "stopped_projects") {
+                return c.status === 'stopped';
+            }
+            if (activeCardFilter === "total_tasks") {
+                return c.totalTasks > 0;
+            }
+            if (activeCardFilter === "done_tasks") {
+                return c.doneTasks > 0;
+            }
+            if (activeCardFilter === "pending_tasks") {
+                return c.pendingTasks > 0;
+            }
+            return true;
+        });
+    }
+
     // Render Lists (Overdue, Upcoming, Completed)
-    renderLists(clients);
+    renderLists(cardFiltered);
 
     // Render Table
-    renderTable(clients);
+    renderTable(cardFiltered);
 }
 
 function renderCharts(employeeData) {
@@ -219,13 +241,13 @@ function renderCharts(employeeData) {
             if (activeElements.length > 0) {
                 const dataIndex = activeElements[0].index;
                 const empName = chart.data.labels[dataIndex];
-                
+
                 // Set the dropdown
                 const empFilter = document.getElementById("filter-employee");
                 if (empFilter) {
                     empFilter.value = empName;
                     applyFilters();
-                    
+
                     // Scroll to the table
                     document.querySelector('.projects-section').scrollIntoView({ behavior: 'smooth' });
                 }
@@ -234,7 +256,7 @@ function renderCharts(employeeData) {
     };
 
     const empLabels = Object.keys(employeeData);
-    
+
     // 1. Employee Projects
     const projDoneData = empLabels.map(l => employeeData[l].projDone);
     const projPendingData = empLabels.map(l => employeeData[l].projPending);
@@ -280,7 +302,7 @@ function formatShortDate(dateStr) {
     if (!dateStr || dateStr === '-' || dateStr.trim() === '') return '-';
     // Agar allaqachon DD.MM.YYYY bo'lsa
     if (dateStr.includes('.') && dateStr.length === 10) return dateStr;
-    
+
     const d = new Date(dateStr);
     if (!isNaN(d.getTime())) {
         const day = String(d.getDate()).padStart(2, '0');
@@ -293,9 +315,9 @@ function formatShortDate(dateStr) {
 
 function parseDate(dateStr) {
     // DD.MM.YYYY
-    if(!dateStr) return new Date(9999, 0, 1);
+    if (!dateStr) return new Date(9999, 0, 1);
     const parts = dateStr.split('.');
-    if(parts.length !== 3) return new Date(dateStr); // fallback
+    if (parts.length !== 3) return new Date(dateStr); // fallback
     return new Date(parts[2], parts[1] - 1, parts[0]);
 }
 
@@ -305,7 +327,7 @@ function renderLists(clients) {
     const completedList = document.getElementById("completed-list");
     const stoppedList = document.getElementById("stopped-list");
     const inprogressList = document.getElementById("inprogress-list");
-    
+
     if (overdueList) overdueList.innerHTML = "";
     if (upcomingList) upcomingList.innerHTML = "";
     if (completedList) completedList.innerHTML = "";
@@ -313,8 +335,8 @@ function renderLists(clients) {
     if (inprogressList) inprogressList.innerHTML = "";
 
     const today = new Date();
-    today.setHours(0,0,0,0);
-    
+    today.setHours(0, 0, 0, 0);
+
     let overdueArr = [];
     let upcomingArr = [];
     let completedArr = [];
@@ -386,15 +408,15 @@ function renderLists(clients) {
         li.style.background = "rgba(16, 185, 129, 0.05)";
         const delDate = parseDate(d.delivered);
         const deadDate = parseDate(d.deadline);
-        
+
         let displayDate = d.delivered && d.delivered !== '-' ? formatShortDate(d.delivered) : formatShortDate(d.deadline);
         let dateLabel = d.delivered && d.delivered !== '-' ? 'Topshirildi' : '✅';
         let lateBadge = '';
-        
+
         if (d.delivered && d.delivered !== '-') {
             const diffTime = delDate - deadDate;
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-            
+
             if (diffDays > 0) {
                 lateBadge = `<span style="font-size: 10px; background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 2px 5px; border-radius: 4px; margin-left: 5px; border: 1px solid #f59e0b;">🐌 Kechikkan</span>`;
             } else if (diffDays < 0) {
@@ -481,11 +503,11 @@ function renderTable(clients) {
             statusHtml = `<span style="background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--red); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">🛑 To'xtatilgan</span>`;
         } else if (c.progress === 100) {
             statusHtml = `<span style="background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--green); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">✅ Tugatilgan</span>`;
-            
+
             if (c.delivered && c.delivered !== '-') {
                 const diffTime = parseDate(c.delivered) - parseDate(c.deadline);
                 const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                
+
                 if (diffDays > 0) {
                     deliveredHtml = `
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
@@ -512,7 +534,7 @@ function renderTable(clients) {
         } else {
             statusHtml = `<span style="background: rgba(59, 130, 246, 0.15); color: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--primary); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">⏳ Jarayonda</span>`;
         }
-        
+
         tr.innerHTML = `
             <td style="font-weight: 600;">${c.name}</td>
             <td style="font-size: 13px; color: var(--text-secondary);">👤 ${c.employee || '-'}</td>
@@ -528,9 +550,9 @@ function renderTable(clients) {
                 <span class="progress-text">${c.progress}%</span>
             </td>
         `;
-        
+
         tr.addEventListener('click', () => openProjectModal(c));
-        
+
         tbody.appendChild(tr);
     });
 }
@@ -540,14 +562,14 @@ function openProjectModal(c) {
     document.getElementById('modal-emp').innerText = c.employee || '-';
     document.getElementById('modal-start').innerText = formatShortDate(c.start);
     document.getElementById('modal-deadline').innerText = formatShortDate(c.deadline);
-    
+
     // Agar bitgan bo'lsa va topshirilgan vaqti bo'lsa, shuni ko'rsatamiz
     if (c.progress === 100 && c.delivered && c.delivered !== '-') {
         document.getElementById('modal-deadline').innerHTML = `<s>${formatShortDate(c.deadline)}</s> <br><span style="color:var(--green)">✅ Topshirildi: ${formatShortDate(c.delivered)}</span>`;
     }
-    
+
     document.getElementById('modal-comment').innerText = c.comment && c.comment !== '-' ? c.comment : '-';
-    
+
     let statusHtml = '';
     if (c.status === 'stopped') {
         statusHtml = `<span style="background: rgba(239, 68, 68, 0.2); color: var(--red); padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid var(--red);">🛑 To'xtatilgan</span>`;
@@ -555,7 +577,7 @@ function openProjectModal(c) {
         if (c.delivered && c.delivered !== '-') {
             const diffTime = parseDate(c.delivered) - parseDate(c.deadline);
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-            
+
             if (diffDays > 0) {
                 statusHtml = `<span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid #f59e0b;">🐌 ${diffDays} kun kechikkan</span>`;
             } else if (diffDays < 0) {
@@ -569,12 +591,12 @@ function openProjectModal(c) {
     } else {
         statusHtml = `<span style="background: rgba(59, 130, 246, 0.2); color: var(--primary); padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid var(--primary);">⏳ Jarayonda</span>`;
     }
-    
+
     const statusContainer = document.getElementById('modal-status-container');
     if (statusContainer) {
         statusContainer.innerHTML = statusHtml;
     }
-    
+
     document.getElementById('modal-progress').style.width = c.progress + '%';
     document.getElementById('modal-progress').style.background = c.progress === 100 ? 'var(--green)' : 'var(--primary)';
     document.getElementById('modal-progress-text').innerText = c.progress + '%';
@@ -588,11 +610,11 @@ function openProjectModal(c) {
             const line = l.trim();
             if (!line) return;
             const li = document.createElement('li');
-            
+
             let statusIcon = '';
             let isDone = false;
             let rawText = line;
-            
+
             if (line.startsWith('✅') || line.startsWith('☑')) {
                 statusIcon = '✅';
                 isDone = true;
@@ -605,7 +627,7 @@ function openProjectModal(c) {
             } else {
                 li.className = 'modal-task-item';
             }
-            
+
             // Extract comment
             let taskName = rawText;
             let taskComment = '';
@@ -618,12 +640,12 @@ function openProjectModal(c) {
             let innerHtml = `<div style="display: flex; align-items: center;">`;
             if (statusIcon) innerHtml += `<span style="font-size:16px; margin-right:8px;">${statusIcon}</span>`;
             innerHtml += `<span>${taskName}</span></div>`;
-            
+
             if (taskComment) {
                 const color = isDone ? 'var(--green)' : 'var(--primary)';
                 innerHtml += `<div style="font-size: 11px; color: var(--text-secondary); margin-left: ${statusIcon ? '28px' : '0'}; margin-top: 6px; padding-left: 8px; border-left: 2px solid ${color}; opacity: 0.8;">${taskComment}</div>`;
             }
-            
+
             li.innerHTML = innerHtml;
             tasksList.appendChild(li);
         });
@@ -633,114 +655,40 @@ function openProjectModal(c) {
 
     document.getElementById('projectModal').classList.add('active');
 }
-let bonusChartInst = null;
 
-function renderBonusTable(bonuses) {
-    const tbody = document.querySelector("#bonus-table tbody");
-    if (!tbody) return;
-    tbody.innerHTML = "";
-
-    let totalSum = 0;
-    let confirmedBonus = 0;
-    let pendingBonus = 0;
-    let employeeBonuses = {};
-
-    bonuses.forEach(b => {
-        const tr = document.createElement("tr");
-        
-        let statusClass = "text-primary";
-        if (b.holat === "Tasdiqlandi") statusClass = "text-green";
-        if (b.holat === "Bekor") statusClass = "text-red";
-        if (b.holat === "Kutilmoqda") statusClass = "text-yellow";
-
-        const bonusValNum = typeof b.bonus === 'number' ? b.bonus : 0;
-        const summaValNum = typeof b.summa === 'number' ? b.summa : 0;
-        
-        totalSum += summaValNum;
-        if (b.holat === "Tasdiqlandi") {
-            confirmedBonus += bonusValNum;
-        } else if (b.holat === "Faol" || b.holat === "Kutilmoqda") {
-            pendingBonus += bonusValNum || (summaValNum); // fallback to summa if bonus column not filled but status active
-        }
-
-        // Employee stats for chart
-        if (b.masul) {
-            if (!employeeBonuses[b.masul]) employeeBonuses[b.masul] = 0;
-            if (b.holat === "Tasdiqlandi") employeeBonuses[b.masul] += bonusValNum;
-        }
-
-        const bonusVal = bonusValNum.toLocaleString() + " so'm";
-        const summaVal = summaValNum.toLocaleString() + " so'm";
-
-        tr.innerHTML = `
-            <td>${b.no || '-'}</td>
-            <td style="font-weight: 600;">${b.mijoz}</td>
-            <td style="font-size: 13px; color: var(--text-secondary);">👤 ${b.masul}</td>
-            <td style="font-size: 12px;">${formatShortDate(b.boshlanish)}</td>
-            <td style="font-size: 12px;">${formatShortDate(b.tugash)}</td>
-            <td style="text-align: center; font-weight: 500;">${b.qolgan} k.</td>
-            <td>
-                <div style="font-size: 10px; margin-bottom: 4px; color: var(--text-secondary);">${b.progress}</div>
-                <div class="progress-bar-bg" style="height: 6px;">
-                    <div class="progress-bar-fill" style="width: ${parseInt(b.progress) || 0}%; background: var(--primary)"></div>
-                </div>
-            </td>
-            <td style="font-weight: 600;">${summaVal}</td>
-            <td class="${statusClass}" style="font-weight: 600; font-size: 13px;">${b.holat}</td>
-            <td class="text-green" style="font-weight: 700;">${bonusVal}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    // Update Stats
-    document.getElementById("bonus-stat-total-sum").innerText = totalSum.toLocaleString() + " so'm";
-    document.getElementById("bonus-stat-confirmed").innerText = confirmedBonus.toLocaleString() + " so'm";
-    document.getElementById("bonus-stat-pending").innerText = (totalSum - confirmedBonus).toLocaleString() + " so'm";
-
-    // Render Bonus Chart
-    renderBonusChart(employeeBonuses);
+function setCardFilter(filterName) {
+    if (activeCardFilter === filterName) {
+        activeCardFilter = "all";
+    } else {
+        activeCardFilter = filterName;
+    }
+    updateCardStyles();
+    applyFilters();
 }
 
-function renderBonusChart(empData) {
-    const labels = Object.keys(empData);
-    const data = Object.values(empData);
+function updateCardStyles() {
+    const cards = {
+        "all": { id: "card-proj-total", cls: "active-all" },
+        "done_projects": { id: "card-proj-done", cls: "active-green" },
+        "pending_projects": { id: "card-proj-pending", cls: "active-yellow" },
+        "stopped_projects": { id: "card-proj-stopped", cls: "active-red" },
+        "total_tasks": { id: "card-task-total", cls: "active-blue" },
+        "done_tasks": { id: "card-task-done", cls: "active-green" },
+        "pending_tasks": { id: "card-task-pending", cls: "active-yellow" }
+    };
 
-    if (bonusChartInst) bonusChartInst.destroy();
-    
-    const ctx = document.getElementById('bonusChart');
-    if (!ctx) return;
-
-    bonusChartInst = new Chart(ctx.getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Tasdiqlangan Bonus (so\'m)',
-                data: data,
-                backgroundColor: 'rgba(16, 185, 129, 0.6)',
-                borderColor: '#10b981',
-                borderWidth: 2,
-                borderRadius: 8,
-                hoverBackgroundColor: 'rgba(16, 185, 129, 0.8)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { labels: { color: '#f8fafc', font: { family: 'Outfit' } } }
-            },
-            scales: {
-                x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: 'Outfit' } } },
-                y: { 
-                    grid: { color: 'rgba(255,255,255,0.05)' }, 
-                    ticks: { 
-                        color: '#94a3b8', 
-                        font: { family: 'Outfit' },
-                        callback: function(value) { return value.toLocaleString(); }
-                    } 
-                }
-            }
+    Object.values(cards).forEach(c => {
+        const el = document.getElementById(c.id);
+        if (el) {
+            el.classList.remove("active-all", "active-green", "active-yellow", "active-red", "active-blue");
         }
     });
+
+    if (activeCardFilter && cards[activeCardFilter]) {
+        const activeCard = cards[activeCardFilter];
+        const el = document.getElementById(activeCard.id);
+        if (el) {
+            el.classList.add(activeCard.cls);
+        }
+    }
 }
