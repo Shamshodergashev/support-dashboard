@@ -190,10 +190,7 @@ function renderDashboardElements(clients) {
     const dt = document.getElementById("stat-task-done"); if (dt) dt.innerText = totalDoneTasks;
     const pt = document.getElementById("stat-task-pending"); if (pt) pt.innerText = totalPendingTasks;
 
-    // Render Charts
-    renderCharts(employeeData);
-
-    // Filter lists and table if activeCardFilter is set
+    // Filter lists, table and charts if activeCardFilter is set
     let cardFiltered = clients;
     if (activeCardFilter !== "all") {
         cardFiltered = clients.filter(c => {
@@ -218,6 +215,24 @@ function renderDashboardElements(clients) {
             return true;
         });
     }
+
+    // Compute chart data from filtered results
+    let chartEmployeeData = {};
+    cardFiltered.forEach(c => {
+        const emp = c.employee || "Biriktirilmagan";
+        if (!chartEmployeeData[emp]) {
+            chartEmployeeData[emp] = { projDone: 0, projPending: 0, taskDone: 0, taskPending: 0 };
+        }
+        if (c.status !== 'stopped') {
+            if (c.progress === 100) chartEmployeeData[emp].projDone++;
+            else chartEmployeeData[emp].projPending++;
+            chartEmployeeData[emp].taskDone += c.doneTasks;
+            chartEmployeeData[emp].taskPending += c.pendingTasks;
+        }
+    });
+
+    // Render Charts (filtered)
+    renderCharts(chartEmployeeData);
 
     // Render Lists (Overdue, Upcoming, Completed)
     renderLists(cardFiltered);
