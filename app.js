@@ -204,13 +204,13 @@ function renderDashboardElements(clients) {
                 return c.status === 'stopped';
             }
             if (activeCardFilter === "total_tasks") {
-                return c.totalTasks > 0;
+                return c.totalTasks > 0 && c.status !== 'stopped';
             }
             if (activeCardFilter === "done_tasks") {
-                return c.doneTasks > 0;
+                return c.doneTasks > 0 && c.status !== 'stopped';
             }
             if (activeCardFilter === "pending_tasks") {
-                return c.pendingTasks > 0;
+                return c.pendingTasks > 0 && c.status !== 'stopped';
             }
             return true;
         });
@@ -384,6 +384,22 @@ function renderLists(clients) {
             }
         }
     });
+
+    // Strict visual filtering to match the intent of the clicked card
+    if (typeof activeCardFilter !== 'undefined') {
+        if (activeCardFilter === "done_projects" || activeCardFilter === "done_tasks") {
+            overdueArr = [];
+            upcomingArr = [];
+            inprogressArr = [];
+        } else if (activeCardFilter === "pending_projects" || activeCardFilter === "pending_tasks") {
+            completedArr = [];
+        } else if (activeCardFilter === "stopped_projects") {
+            overdueArr = [];
+            upcomingArr = [];
+            completedArr = [];
+            inprogressArr = [];
+        }
+    }
 
     // Sort by date
     overdueArr.sort((a, b) => parseDate(a.deadline) - parseDate(b.deadline));
