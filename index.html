@@ -39,7 +39,7 @@
             </div>
         </section>
 
-        <!-- Stats Row (7 cards) -->
+        <!-- Stats Row (8 cards) -->
         <section class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
             <!-- Projects Stats -->
             <div class="stat-card glass-panel" id="card-proj-total">
@@ -56,6 +56,11 @@
                 <h3>Jarayondagi Loyihalar</h3>
                 <div class="stat-value text-yellow" id="stat-proj-pending">0</div>
                 <div class="stat-icon">⏳</div>
+            </div>
+            <div class="stat-card glass-panel" id="card-proj-using">
+                <h3>Qisman topshirilgan</h3>
+                <div class="stat-value text-orange" id="stat-proj-using-val">0</div>
+                <div class="stat-icon">🟡</div>
             </div>
             <div class="stat-card glass-panel" id="card-proj-stopped">
                 <h3>To'xtatilgan Loyihalar</h3>
@@ -119,11 +124,17 @@
             </div>
         </section>
 
-        <!-- Stopped & In Progress Lists -->
-        <section class="lists-grid glass-panel" style="grid-template-columns: 1fr 1fr; gap: 40px; margin-top: -10px;">
+        <!-- Stopped, Using & In Progress Lists -->
+        <section class="lists-grid glass-panel" style="grid-template-columns: 1fr 1fr 1fr; gap: 40px; margin-top: -10px;">
             <div class="deadlines-container" style="border-right: 1px solid var(--glass-border); padding-right: 20px;">
                 <h3 style="color: var(--red);">🛑 To'xtatilgan loyihalar</h3>
                 <ul id="stopped-list" class="deadline-list">
+                    <!-- JS fills this -->
+                </ul>
+            </div>
+            <div class="deadlines-container" style="border-right: 1px solid var(--glass-border); padding-right: 20px;">
+                <h3 style="color: var(--orange);">🟡 Qisman topshirilgan - Aktiv</h3>
+                <ul id="using-list" class="deadline-list">
                     <!-- JS fills this -->
                 </ul>
             </div>
