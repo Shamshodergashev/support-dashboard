@@ -59,7 +59,18 @@ async function fetchData() {
     try {
         const response = await fetch(API_URL);
         const data = await response.json();
-        processData(data.clients || []);
+        
+        let hiddenIds = [];
+        try {
+            const hiddenRes = await fetch("https://support-admin-uz.onrender.com/api/hidden_clients");
+            hiddenIds = await hiddenRes.json();
+        } catch (err) {
+            console.error("Admin paneldan yashirin mijozlarni yuklab bo'lmadi:", err);
+        }
+
+        // Yashirilmagan (ID si hiddenIds ichida yo'q) mijozlarni ajratib olamiz
+        const visibleClients = (data.clients || []).filter(c => !hiddenIds.includes(String(c.id)));
+        processData(visibleClients);
 
         const now = new Date();
         document.getElementById("last-updated").innerText = `Oxirgi yangilanish: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
