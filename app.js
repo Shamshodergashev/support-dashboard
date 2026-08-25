@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "card-proj-total": "all",
         "card-proj-done": "done_projects",
         "card-proj-pending": "pending_projects",
+        "card-proj-using": "using_projects",
         "card-proj-stopped": "stopped_projects",
         "card-task-total": "total_tasks",
         "card-task-done": "done_tasks",
@@ -157,9 +158,11 @@ function renderDashboardElements(clients) {
     let employeeData = {};
 
     let stoppedProjects = 0;
+    let usingProjects = 0;
 
     clients.forEach(c => {
         if (c.status === 'stopped') stoppedProjects++;
+        else if (c.status === 'using') usingProjects++;
         else if (c.progress === 100) doneProjects++;
         else pendingProjects++;
 
@@ -169,10 +172,14 @@ function renderDashboardElements(clients) {
 
         const emp = c.employee || "Biriktirilmagan";
         if (!employeeData[emp]) {
-            employeeData[emp] = { projDone: 0, projPending: 0, taskDone: 0, taskPending: 0 };
+            employeeData[emp] = { projDone: 0, projPending: 0, projUsing: 0, taskDone: 0, taskPending: 0 };
         }
 
-        if (c.status !== 'stopped') {
+        if (c.status === 'using') {
+            employeeData[emp].projUsing++;
+            employeeData[emp].taskDone += c.doneTasks;
+            employeeData[emp].taskPending += c.pendingTasks;
+        } else if (c.status !== 'stopped') {
             if (c.progress === 100) employeeData[emp].projDone++;
             else employeeData[emp].projPending++;
             employeeData[emp].taskDone += c.doneTasks;
@@ -184,6 +191,7 @@ function renderDashboardElements(clients) {
     const tp = document.getElementById("stat-proj-total"); if (tp) tp.innerText = totalProjects;
     const dp = document.getElementById("stat-proj-done"); if (dp) dp.innerText = doneProjects;
     const pp = document.getElementById("stat-proj-pending"); if (pp) pp.innerText = pendingProjects;
+    const up = document.getElementById("stat-proj-using-val"); if (up) up.innerText = usingProjects;
     const sp = document.getElementById("stat-proj-stopped-val"); if (sp) sp.innerText = stoppedProjects;
 
     const tt = document.getElementById("stat-task-total"); if (tt) tt.innerText = totalTasks;
@@ -195,10 +203,13 @@ function renderDashboardElements(clients) {
     if (activeCardFilter !== "all") {
         cardFiltered = clients.filter(c => {
             if (activeCardFilter === "done_projects") {
-                return c.progress === 100 && c.status !== 'stopped';
+                return c.progress === 100 && c.status !== 'stopped' && c.status !== 'using';
             }
             if (activeCardFilter === "pending_projects") {
-                return c.progress < 100 && c.status !== 'stopped';
+                return c.progress < 100 && c.status !== 'stopped' && c.status !== 'using';
+            }
+            if (activeCardFilter === "using_projects") {
+                return c.status === 'using';
             }
             if (activeCardFilter === "stopped_projects") {
                 return c.status === 'stopped';
@@ -221,9 +232,13 @@ function renderDashboardElements(clients) {
     cardFiltered.forEach(c => {
         const emp = c.employee || "Biriktirilmagan";
         if (!chartEmployeeData[emp]) {
-            chartEmployeeData[emp] = { projDone: 0, projPending: 0, taskDone: 0, taskPending: 0 };
+            chartEmployeeData[emp] = { projDone: 0, projPending: 0, projUsing: 0, taskDone: 0, taskPending: 0 };
         }
-        if (c.status !== 'stopped') {
+        if (c.status === 'using') {
+            chartEmployeeData[emp].projUsing++;
+            chartEmployeeData[emp].taskDone += c.doneTasks;
+            chartEmployeeData[emp].taskPending += c.pendingTasks;
+        } else if (c.status !== 'stopped') {
             if (c.progress === 100) chartEmployeeData[emp].projDone++;
             else chartEmployeeData[emp].projPending++;
             chartEmployeeData[emp].taskDone += c.doneTasks;
@@ -234,11 +249,16 @@ function renderDashboardElements(clients) {
     // Apply strict visualization filters to remove opposing colors in charts
     Object.keys(chartEmployeeData).forEach(emp => {
         if (activeCardFilter === "done_projects" || activeCardFilter === "done_tasks") {
-            chartEmployeeData[emp].projPending = 0; // Hide yellow (pending projects)
-            chartEmployeeData[emp].taskPending = 0; // Hide blue (pending tasks)
+            chartEmployeeData[emp].projPending = 0;
+            chartEmployeeData[emp].projUsing = 0;
+            chartEmployeeData[emp].taskPending = 0;
         } else if (activeCardFilter === "pending_projects" || activeCardFilter === "pending_tasks") {
-            chartEmployeeData[emp].projDone = 0;    // Hide green (done projects)
-            chartEmployeeData[emp].taskDone = 0;    // Hide green (done tasks)
+            chartEmployeeData[emp].projDone = 0;
+            chartEmployeeData[emp].projUsing = 0;
+            chartEmployeeData[emp].taskDone = 0;
+        } else if (activeCardFilter === "using_projects") {
+            chartEmployeeData[emp].projDone = 0;
+            chartEmployeeData[emp].projPending = 0;
         }
     });
 
@@ -286,6 +306,7 @@ function renderCharts(employeeData) {
     // 1. Employee Projects
     const projDoneData = empLabels.map(l => employeeData[l].projDone);
     const projPendingData = empLabels.map(l => employeeData[l].projPending);
+    const projUsingData = empLabels.map(l => employeeData[l].projUsing);
 
     if (empProjChartInst) empProjChartInst.destroy();
     const epCtx = document.getElementById('empProjectsChart');
@@ -296,7 +317,8 @@ function renderCharts(employeeData) {
                 labels: empLabels,
                 datasets: [
                     { label: 'Bitgan Loyihalar', data: projDoneData, backgroundColor: '#10b981', borderRadius: 4 },
-                    { label: 'Jarayondagi', data: projPendingData, backgroundColor: '#f59e0b', borderRadius: 4 }
+                    { label: 'Qisman topshirilgan', data: projUsingData, backgroundColor: '#f59e0b', borderRadius: 4 },
+                    { label: 'Jarayondagi', data: projPendingData, backgroundColor: '#3b82f6', borderRadius: 4 }
                 ]
             },
             options: commonOptions
@@ -352,12 +374,14 @@ function renderLists(clients) {
     const upcomingList = document.getElementById("upcoming-list");
     const completedList = document.getElementById("completed-list");
     const stoppedList = document.getElementById("stopped-list");
+    const usingList = document.getElementById("using-list");
     const inprogressList = document.getElementById("inprogress-list");
 
     if (overdueList) overdueList.innerHTML = "";
     if (upcomingList) upcomingList.innerHTML = "";
     if (completedList) completedList.innerHTML = "";
     if (stoppedList) stoppedList.innerHTML = "";
+    if (usingList) usingList.innerHTML = "";
     if (inprogressList) inprogressList.innerHTML = "";
 
     const today = new Date();
@@ -367,11 +391,14 @@ function renderLists(clients) {
     let upcomingArr = [];
     let completedArr = [];
     let stoppedArr = [];
+    let usingArr = [];
     let inprogressArr = [];
 
     clients.forEach(c => {
         if (c.status === 'stopped') {
             stoppedArr.push(c);
+        } else if (c.status === 'using') {
+            usingArr.push(c);
         } else if (c.progress === 100) {
             completedArr.push(c);
         } else {
@@ -391,13 +418,22 @@ function renderLists(clients) {
             overdueArr = [];
             upcomingArr = [];
             inprogressArr = [];
+            usingArr = [];
         } else if (activeCardFilter === "pending_projects" || activeCardFilter === "pending_tasks") {
             completedArr = [];
+            usingArr = [];
         } else if (activeCardFilter === "stopped_projects") {
             overdueArr = [];
             upcomingArr = [];
             completedArr = [];
             inprogressArr = [];
+            usingArr = [];
+        } else if (activeCardFilter === "using_projects") {
+            overdueArr = [];
+            upcomingArr = [];
+            completedArr = [];
+            inprogressArr = [];
+            stoppedArr = [];
         }
     }
 
@@ -407,7 +443,7 @@ function renderLists(clients) {
     completedArr.sort((a, b) => parseDate(b.deadline) - parseDate(a.deadline));
 
     // Render Overdue
-    overdueArr.slice(0, 5).forEach(d => {
+    overdueArr.forEach(d => {
         const li = document.createElement("li");
         li.className = `deadline-item danger`;
         let displayDate = formatShortDate(d.deadline);
@@ -425,7 +461,7 @@ function renderLists(clients) {
     });
 
     // Render Upcoming
-    upcomingArr.slice(0, 5).forEach(d => {
+    upcomingArr.forEach(d => {
         const li = document.createElement("li");
         li.className = `deadline-item warning`;
         let displayDate = formatShortDate(d.deadline);
@@ -443,7 +479,7 @@ function renderLists(clients) {
     });
 
     // Render Completed
-    completedArr.slice(0, 5).forEach(d => {
+    completedArr.forEach(d => {
         const li = document.createElement("li");
         li.className = `deadline-item`;
         li.style.borderLeftColor = "var(--green)";
@@ -508,10 +544,30 @@ function renderLists(clients) {
         if (stoppedArr.length === 0) stoppedList.innerHTML = `<li style="color:#94a3b8; text-align:center; padding: 10px;">To'xtatilgan loyihalar yo'q.</li>`;
     }
 
+    // Render Using (Qisman topshirilgan - Aktiv)
+    if (usingList) {
+        usingArr.forEach(d => {
+            const li = document.createElement("li");
+            li.className = `deadline-item using`;
+            li.innerHTML = `
+                <div class="deadline-info">
+                    <strong>${d.name}</strong>
+                    <span>👤 ${d.employee || '-'}</span>
+                    ${(d.comment && d.comment !== '-') ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; border-left: 2px solid var(--orange); padding-left: 6px; opacity: 0.8;">${d.comment}</div>` : ''}
+                </div>
+                <div class="deadline-date text-orange">🟡 Aktiv</div>
+            `;
+            li.style.cursor = "pointer";
+            li.addEventListener('click', () => openProjectModal(d));
+            usingList.appendChild(li);
+        });
+        if (usingArr.length === 0) usingList.innerHTML = `<li style="color:#94a3b8; text-align:center; padding: 10px;">Qisman topshirilgan loyihalar yo'q.</li>`;
+    }
+
     // Render In Progress
     if (inprogressList) {
-        // limit to 5 to avoid long list or display all if preferred, let's display up to 10
-        inprogressArr.slice(0, 10).forEach(d => {
+        // limit to 10
+        inprogressArr.forEach(d => {
             const li = document.createElement("li");
             li.className = `deadline-item`;
             let displayDate = formatShortDate(d.deadline);
@@ -543,6 +599,8 @@ function renderTable(clients) {
 
         if (c.status === 'stopped') {
             statusHtml = `<span style="background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--red); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">🛑 To'xtatilgan</span>`;
+        } else if (c.status === 'using') {
+            statusHtml = `<span style="background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--orange); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">🟡 Qisman topshirilgan</span>`;
         } else if (c.progress === 100) {
             statusHtml = `<span style="background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid var(--green); display: inline-flex; align-items: center; justify-content: center; min-width: 90px;">✅ Tugatilgan</span>`;
 
@@ -615,6 +673,8 @@ function openProjectModal(c) {
     let statusHtml = '';
     if (c.status === 'stopped') {
         statusHtml = `<span style="background: rgba(239, 68, 68, 0.2); color: var(--red); padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid var(--red);">🛑 To'xtatilgan</span>`;
+    } else if (c.status === 'using') {
+        statusHtml = `<span style="background: rgba(245, 158, 11, 0.2); color: var(--orange); padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid var(--orange);">🟡 Qisman topshirilgan - Aktiv</span>`;
     } else if (c.progress === 100) {
         if (c.delivered && c.delivered !== '-') {
             const diffTime = parseDate(c.delivered) - parseDate(c.deadline);
@@ -713,6 +773,7 @@ function updateCardStyles() {
         "all": { id: "card-proj-total", cls: "active-all" },
         "done_projects": { id: "card-proj-done", cls: "active-green" },
         "pending_projects": { id: "card-proj-pending", cls: "active-yellow" },
+        "using_projects": { id: "card-proj-using", cls: "active-orange" },
         "stopped_projects": { id: "card-proj-stopped", cls: "active-red" },
         "total_tasks": { id: "card-task-total", cls: "active-blue" },
         "done_tasks": { id: "card-task-done", cls: "active-green" },
@@ -722,7 +783,7 @@ function updateCardStyles() {
     Object.values(cards).forEach(c => {
         const el = document.getElementById(c.id);
         if (el) {
-            el.classList.remove("active-all", "active-green", "active-yellow", "active-red", "active-blue");
+            el.classList.remove("active-all", "active-green", "active-yellow", "active-red", "active-blue", "active-orange");
         }
     });
 
